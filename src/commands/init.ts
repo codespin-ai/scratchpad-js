@@ -1,11 +1,13 @@
 // src/commands/init.ts
 import * as fs from "fs";
 import * as path from "path";
+import * as os from "os";
 import { getGitRoot } from "../utils/git.js";
 
 interface InitOptions {
   force?: boolean;
   image: string;
+  system?: boolean;
 }
 
 interface CommandContext {
@@ -17,40 +19,77 @@ export async function init(
   context: CommandContext
 ): Promise<void> {
   const { workingDir } = context;
-  const { force, image } = options;
+  const { force, image, system } = options;
 
   if (!image) {
     throw new Error("Docker image is required. Use --image <image_name>");
   }
 
-  // Verify we're in a git repository
-  const gitRoot = await getGitRoot(workingDir);
-  if (!gitRoot) {
-    throw new Error(
-      "Not in a git repository. Please initialize a git repository first."
+  if (system) {
+    // Initialize system-level configuration
+    const configDir = path.join(os.homedir(), ".codespin");
+    if (!fs.existsSync(configDir)) {
+      fs.mkdirSync(configDir, { recursive: true });
+    }
+
+    const configFile = path.join(configDir, "codebox.json");
+
+    // Check if config file already exists and we're not forcing
+    if (fs.existsSync(configFile) && !force) {
+      throw new Error("System configuration already exists. Use --force to overwrite.");
+    }
+
+    // Read existing config to preserve projects array if it exists
+    let existingData = { projects: [] };
+    if (fs.existsSync(configFile)) {
+      try {
+        existingData = JSON.parse(fs.readFileSync(configFile, "utf8"));
+      } catch (error) {
+        console.log("Could not parse existing config file, creating new one.");
+      }
+    }
+
+    // Create config file with updated dockerImage
+    const config = {
+      ...existingData,
+      dockerImage: image,
+    };
+
+    fs.writeFileSync(configFile, JSON.stringify(config, null, 2), "utf8");
+    console.log(
+      `Created system configuration at ${configFile} with Docker image: ${image}`
+    );
+  } else {
+    // Project-level initialization
+    // Verify we're in a git repository
+    const gitRoot = await getGitRoot(workingDir);
+    if (!gitRoot) {
+      throw new Error(
+        "Not in a git repository. Please initialize a git repository first."
+      );
+    }
+
+    // Create .codespin directory if it doesn't exist
+    const configDir = path.join(gitRoot, ".codespin");
+    if (!fs.existsSync(configDir)) {
+      fs.mkdirSync(configDir, { recursive: true });
+    }
+
+    const configFile = path.join(configDir, "codebox.json");
+
+    // Check if config file already exists and we're not forcing
+    if (fs.existsSync(configFile) && !force) {
+      throw new Error("Configuration already exists. Use --force to overwrite.");
+    }
+
+    // Create config file
+    const config = {
+      dockerImage: image,
+    };
+
+    fs.writeFileSync(configFile, JSON.stringify(config, null, 2), "utf8");
+    console.log(
+      `Created configuration at ${configFile} with Docker image: ${image}`
     );
   }
-
-  // Create .codespin directory if it doesn't exist
-  const configDir = path.join(gitRoot, ".codespin");
-  if (!fs.existsSync(configDir)) {
-    fs.mkdirSync(configDir, { recursive: true });
-  }
-
-  const configFile = path.join(configDir, "codebox.json");
-
-  // Check if config file already exists and we're not forcing
-  if (fs.existsSync(configFile) && !force) {
-    throw new Error("Configuration already exists. Use --force to overwrite.");
-  }
-
-  // Create config file
-  const config = {
-    dockerImage: image,
-  };
-
-  fs.writeFileSync(configFile, JSON.stringify(config, null, 2), "utf8");
-  console.log(
-    `Created configuration at ${configFile} with Docker image: ${image}`
-  );
 }

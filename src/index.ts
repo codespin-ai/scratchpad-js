@@ -28,6 +28,11 @@ export async function main() {
             type: "string",
             demandOption: true,
             describe: "Docker image to use for this project",
+          })
+          .option("system", {
+            type: "boolean",
+            demandOption: false,
+            describe: "Create a system-level configuration at $HOME/.codespin/codebox.json",
           }),
       async (argv) => {
         await init(argv as any, { workingDir: process.cwd() });

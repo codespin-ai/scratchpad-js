@@ -16,7 +16,7 @@ export interface ExecuteResult {
 }
 
 export function getProjectsFile(): string {
-  return path.join(os.homedir(), ".codespin", "projects.json");
+  return path.join(os.homedir(), ".codespin", "codebox.json");
 }
 
 export function getProjects(): string[] {
@@ -57,20 +57,39 @@ export function validateFilePath(
   return fullPath.startsWith(resolvedProjectDir);
 }
 
-export function getDockerImage(projectDir: string): string | null {
-  const configFile = path.join(projectDir, ".codespin", "codebox.json");
-
+export function getSystemConfig(): { dockerImage?: string } | null {
+  const configFile = getProjectsFile();
+  
   if (!fs.existsSync(configFile)) {
     return null;
   }
-
+  
   try {
-    const config = JSON.parse(fs.readFileSync(configFile, "utf8"));
-    return config.dockerImage || null;
+    return JSON.parse(fs.readFileSync(configFile, "utf8"));
   } catch (error) {
-    console.error(`Failed to parse config file for ${projectDir}`);
+    console.error("Failed to parse system config file");
     return null;
   }
+}
+
+export function getDockerImage(projectDir: string): string | null {
+  // First check project-level configuration
+  const configFile = path.join(projectDir, ".codespin", "codebox.json");
+
+  if (fs.existsSync(configFile)) {
+    try {
+      const config = JSON.parse(fs.readFileSync(configFile, "utf8"));
+      if (config.dockerImage) {
+        return config.dockerImage;
+      }
+    } catch (error) {
+      console.error(`Failed to parse config file for ${projectDir}`);
+    }
+  }
+  
+  // Fallback to system-level configuration
+  const systemConfig = getSystemConfig();
+  return systemConfig?.dockerImage || null;
 }
 
 export async function executeInContainer(

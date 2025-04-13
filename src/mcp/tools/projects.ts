@@ -3,7 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as fs from "fs";
 import * as path from "path";
 import * as zod from "zod";
-import { getProjects, getDockerImage } from "../utils.js";
+import { getProjects, getDockerImage, getSystemConfig } from "../utils.js";
 
 // Define the input schema type
 const ProjectConfigInput = {
@@ -16,6 +16,7 @@ export function registerProjectTools(server: McpServer): void {
   server.tool("list_projects", "List available projects", {}, async () => {
     try {
       const projects = getProjects();
+      const systemConfig = getSystemConfig();
 
       if (projects.length === 0) {
         return {
@@ -32,12 +33,27 @@ export function registerProjectTools(server: McpServer): void {
       const projectDetails = projects.map((projectPath) => {
         const exists = fs.existsSync(projectPath);
         const dockerImage = exists ? getDockerImage(projectPath) : null;
+        
+        // Check if this is using system fallback
+        const configFile = path.join(projectPath, ".codespin", "codebox.json");
+        const hasLocalConfig = exists && fs.existsSync(configFile);
+        let hasLocalDockerImage = false;
+        
+        if (hasLocalConfig) {
+          try {
+            const config = JSON.parse(fs.readFileSync(configFile, "utf8"));
+            hasLocalDockerImage = !!config.dockerImage;
+          } catch {}
+        }
+        
+        const usesSystemConfig = dockerImage && !hasLocalDockerImage && !!systemConfig?.dockerImage;
 
         return {
           path: projectPath,
           status: exists ? "exists" : "missing",
           configured: dockerImage ? "yes" : "no",
           dockerImage: dockerImage || "not configured",
+          usesSystemConfig,
         };
       });
 
@@ -48,7 +64,7 @@ export function registerProjectTools(server: McpServer): void {
         output.push(`   Status: ${project.status}`);
         output.push(`   Configured: ${project.configured}`);
         if (project.configured === "yes") {
-          output.push(`   Docker Image: ${project.dockerImage}`);
+          output.push(`   Docker Image: ${project.dockerImage}${project.usesSystemConfig ? " (from system config)" : ""}`);
         }
         output.push("");
       });
@@ -84,6 +100,7 @@ export function registerProjectTools(server: McpServer): void {
       try {
         const projects = getProjects();
         const resolvedPath = path.resolve(projectDir);
+        const systemConfig = getSystemConfig();
 
         if (!projects.includes(resolvedPath)) {
           return {
@@ -110,6 +127,20 @@ export function registerProjectTools(server: McpServer): void {
         }
 
         const dockerImage = getDockerImage(resolvedPath);
+        
+        // Check if this is using system fallback
+        const configFile = path.join(resolvedPath, ".codespin", "codebox.json");
+        const hasLocalConfig = fs.existsSync(configFile);
+        let hasLocalDockerImage = false;
+        
+        if (hasLocalConfig) {
+          try {
+            const config = JSON.parse(fs.readFileSync(configFile, "utf8"));
+            hasLocalDockerImage = !!config.dockerImage;
+          } catch {}
+        }
+        
+        const usesSystemConfig = dockerImage && !hasLocalDockerImage && !!systemConfig?.dockerImage;
 
         return {
           content: [
@@ -121,6 +152,8 @@ export function registerProjectTools(server: McpServer): void {
                   exists: true,
                   configured: !!dockerImage,
                   dockerImage: dockerImage || null,
+                  usesSystemConfig: usesSystemConfig,
+                  systemConfigAvailable: !!systemConfig?.dockerImage,
                 },
                 null,
                 2

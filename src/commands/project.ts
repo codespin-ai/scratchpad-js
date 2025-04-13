@@ -16,7 +16,7 @@ function getProjectsFile(): string {
     fs.mkdirSync(configDir, { recursive: true });
   }
 
-  return path.join(configDir, "projects.json");
+  return path.join(configDir, "codebox.json");
 }
 
 function getProjects(): { projects: string[] } {
@@ -27,14 +27,15 @@ function getProjects(): { projects: string[] } {
   }
 
   try {
-    return JSON.parse(fs.readFileSync(projectsFile, "utf8"));
+    const data = JSON.parse(fs.readFileSync(projectsFile, "utf8"));
+    return { projects: data.projects || [] };
   } catch (error) {
     console.error("Failed to parse projects file, creating new one");
     return { projects: [] };
   }
 }
 
-function saveProjects(projectsData: { projects: string[] }): void {
+function saveProjects(projectsData: { projects: string[], dockerImage?: string }): void {
   const projectsFile = getProjectsFile();
   fs.writeFileSync(projectsFile, JSON.stringify(projectsData, null, 2), "utf8");
 }
@@ -107,26 +108,47 @@ export async function listProjects(context: CommandContext): Promise<void> {
   console.log("Registered projects:");
   console.log("-------------------");
 
+  // Get system config for fallback Docker image
+  const projectsFile = getProjectsFile();
+  let systemDockerImage = null;
+  
+  if (fs.existsSync(projectsFile)) {
+    try {
+      const systemConfig = JSON.parse(fs.readFileSync(projectsFile, "utf8"));
+      systemDockerImage = systemConfig.dockerImage || null;
+    } catch {}
+  }
+
   projectsData.projects.forEach((projectPath, index) => {
     // Check if the project has a codebox configuration
     const configFile = path.join(projectPath, ".codespin", "codebox.json");
-    const hasConfig = fs.existsSync(configFile);
+    const exists = fs.existsSync(projectPath);
+    const hasConfig = exists && fs.existsSync(configFile);
 
     // Get the Docker image if configuration exists
     let dockerImage = "";
+    let fromSystem = false;
+    
     if (hasConfig) {
       try {
         const config = JSON.parse(fs.readFileSync(configFile, "utf8"));
-        dockerImage = config.dockerImage || "No image specified";
+        dockerImage = config.dockerImage || "";
       } catch {
         dockerImage = "Invalid configuration";
       }
     }
+    
+    // If no project-specific image but there's a system image, use that
+    if (!dockerImage && systemDockerImage) {
+      dockerImage = systemDockerImage;
+      fromSystem = true;
+    }
 
     console.log(`${index + 1}. ${projectPath}`);
-    console.log(`   Status: ${hasConfig ? "Configured" : "Not configured"}`);
-    if (hasConfig) {
-      console.log(`   Docker Image: ${dockerImage}`);
+    console.log(`   Status: ${exists ? "exists" : "missing"}`);
+    console.log(`   Configured: ${hasConfig || systemDockerImage ? "yes" : "no"}`);
+    if (dockerImage) {
+      console.log(`   Docker Image: ${dockerImage}${fromSystem ? " (from system config)" : ""}`);
     }
     console.log();
   });

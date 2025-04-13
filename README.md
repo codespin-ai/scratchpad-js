@@ -27,6 +27,10 @@ Requires Node.js v16+, Docker daemon, Git.
 # Creates .codespin/codebox.json with project config
 codebox init --image node:18
 
+# Initialize system-wide Docker image configuration
+# Creates $HOME/.codespin/codebox.json with global config
+codebox init --system --image node:18
+
 # Register projects
 codebox project add /path/to/project
 codebox project list
@@ -35,6 +39,19 @@ codebox project remove /path/to/project
 # Start MCP server
 codebox start
 ```
+
+## Configuration System
+
+Codebox uses a hierarchical configuration system:
+
+1. **Project-specific configuration**: Located at `.codespin/codebox.json` within each project
+2. **System-wide configuration**: Located at `$HOME/.codespin/codebox.json`
+
+When a Docker image is needed for a project, Codebox checks:
+- First, the project-specific configuration
+- If not found or no `dockerImage` defined, falls back to the system-wide configuration
+
+This allows you to define a default image for all projects while allowing project-specific overrides.
 
 ## Docker Image Requirements
 
@@ -54,6 +71,9 @@ npm init -y
 
 # Initialize codebox with Node.js image
 codebox init --image node:18
+
+# Or set a system-wide default Docker image
+codebox init --system --image node:18
 
 # Register the project
 codebox project add $(pwd)
@@ -149,7 +169,12 @@ Example usage:
 
 ### list_projects
 
-Lists registered projects with status.
+Lists registered projects with status. For each project, shows:
+- Path to the project
+- Whether the project exists
+- Configuration status
+- Docker image being used
+- Whether the Docker image is coming from system configuration
 
 ### get_project_config
 
