@@ -109,6 +109,44 @@ Example usage:
 }
 ```
 
+### write_batch_files
+
+```typescript
+{
+  projectDir: string; // Absolute project path
+  files: [
+    {
+      filePath: string; // Relative path from project root
+      content: string; // Content to write
+      mode: "overwrite" | "append";
+    }
+  ];
+  stopOnError: boolean; // Optional: Whether to stop execution if a file write fails (default: true)
+}
+```
+
+The batch file tool allows writing multiple files in a single LLM call, reducing API costs and improving efficiency. This is particularly useful when you need to create or modify multiple tiny/small files at once.
+
+Example usage:
+```json
+{
+  "projectDir": "/path/to/project",
+  "files": [
+    {
+      "filePath": "src/config.ts",
+      "content": "export const config = { debug: true };",
+      "mode": "overwrite"
+    },
+    {
+      "filePath": "src/constants.ts",
+      "content": "export const API_URL = 'https://api.example.com';",
+      "mode": "overwrite"
+    }
+  ],
+  "stopOnError": true
+}
+```
+
 ### list_projects
 
 Lists registered projects with status.
@@ -140,6 +178,7 @@ Available tools:
 - execute_command: Run commands in project's Docker container
 - execute_batch_commands: Run multiple commands in sequence with a single call
 - write_file: Create or modify files
+- write_batch_files: Create or modify multiple files in a single call
 - get_project_config: Get project details
 
 TOKEN USAGE WARNING:
@@ -150,6 +189,7 @@ Large directory listings or file contents can consume significant tokens. To avo
 4. Request specific files rather than entire directories
 5. Check file sizes before requesting full content (use 'wc -c <filename>' or 'ls -l')
 6. Use execute_batch_commands for predictable command sequences
+7. Use write_batch_files when creating multiple small files at once
 
 Efficient workflow example:
 GOOD:
@@ -159,11 +199,14 @@ GOOD:
 > execute_command {projectDir: "/path", command: "head -n 20 src/config.ts"}
 > write_file {projectDir: "/path", filePath: "src/config.ts", content: "..."}
 > execute_batch_commands {projectDir: "/path", commands: ["npm install", "npm test"]}
+> write_batch_files {projectDir: "/path", files: [{filePath: "file1.txt", content: "..."}, {filePath: "file2.txt", content: "..."}]}
 
 BAD (wastes tokens):
 > execute_command {projectDir: "/path", command: "find . -type f"} // Lists everything
 > execute_command {projectDir: "/path", command: "cat node_modules/package/README.md"}
 > execute_command {projectDir: "/path", command: "cat src/large-file.ts"} // Without checking size first
+> write_file {projectDir: "/path", filePath: "file1.txt", content: "..."} // Multiple separate write_file calls
+> write_file {projectDir: "/path", filePath: "file2.txt", content: "..."} // for small files
 
 Remember:
 - Work incrementally through directories
@@ -174,6 +217,7 @@ Remember:
 - If the user asks for the output of a command, you may print the output of execute_command verbatim in a markdown codeblock.
 - Of course, if you know the sizes of files you're requesting (via a previous 'ls' for example), you don't need to ask every time.
 - Use batch commands when you know a fixed sequence of commands needs to be executed. This saves API costs and time.
+- Use write_batch_files when writing multiple small files at once to reduce API calls.
 ```
 
 ## License

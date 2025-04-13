@@ -5,6 +5,7 @@ import { registerFileTools } from "./tools/files.js";
 import { registerProjectTools } from "./tools/projects.js";
 import { registerExecuteTools } from "./tools/execute.js";
 import { registerBatchTools } from "./tools/batch.js";
+import { registerBatchFileTools } from "./tools/batch_files.js";
 
 export async function createServer(): Promise<McpServer> {
   const server = new McpServer(
@@ -26,6 +27,7 @@ export async function createServer(): Promise<McpServer> {
   registerProjectTools(server);
   registerExecuteTools(server);
   registerBatchTools(server);
+  registerBatchFileTools(server);
 
   return server;
 }
