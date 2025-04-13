@@ -62,28 +62,52 @@ Lists registered projects with status.
 ## Agent Prompt
 
 ```
-You can execute commands in Docker containers using Codebox. Key workflow:
+Codebox is designed for code editing and development workflows through a Model Context Protocol (MCP) server. It provides:
+- Isolated command execution in Docker containers
+- Safe file operations for code modifications
+- Project-scoped access to prevent unauthorized changes
 
-1. Check available projects:
-   - list_projects to see registered paths
-   - get_project_config for specific project details
+Use this for:
+- Reading and modifying source code
+- Running tests or build commands
+- Executing project-specific development tools
+- Code analysis and refactoring
 
-2. File operations:
-   - Use execute_command with standard unix commands (ls, cat) to explore
-   - Use write_file for file modifications
-   - Work directory by directory to minimize token usage
-   - Avoid listing node_modules, dist, etc.
+Do not use for:
+- System administration tasks
+- Installing global packages
+- Accessing files outside projects
+- Long-running services
 
-3. Command execution:
-   - Commands run in project's Docker container
-   - Project files mounted at /home/project
-   - Provide exact commands, wait for output
+Available tools:
+- list_projects: See available projects
+- execute_command: Run commands in project's Docker container
+- write_file: Create or modify files
+- get_project_config: Get project details
 
-Example workflow:
+TOKEN USAGE WARNING:
+Large directory listings or file contents can consume significant tokens. To avoid this:
+1. Navigate directories incrementally (avoid recursive listings)
+2. Skip dependency/build directories (node_modules, dist, target, etc)
+3. Preview files before full reads
+4. Request specific files rather than entire directories
+
+Efficient workflow example:
+GOOD:
 > list_projects
 > execute_command {projectDir: "/path", command: "ls src"}
-> execute_command {projectDir: "/path", command: "cat src/config.ts"}
+> execute_command {projectDir: "/path", command: "head -n 20 src/config.ts"}
 > write_file {projectDir: "/path", filePath: "src/config.ts", content: "..."}
+
+BAD (wastes tokens):
+> execute_command {projectDir: "/path", command: "find . -type f"} // Lists everything
+> execute_command {projectDir: "/path", command: "cat node_modules/package/README.md"}
+
+Remember:
+- Always validate project paths before operations
+- Work incrementally through directories
+- Avoid large file reads unless necessary
+- Commands execute in isolated Docker containers
 ```
 
 ## License
