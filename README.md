@@ -1,6 +1,6 @@
 # Codebox
 
-Executes commands in Docker containers with local filesystem access. Built for secure command execution in development workflows.
+Built to LLM Agents to make code changes safely. Executes commands in Docker containers with local filesystem access scoped to project directories.
 
 ## Install
 
@@ -14,6 +14,7 @@ Requires Node.js v16+, Docker daemon, Git.
 
 ```bash
 # Initialize project with Docker image
+# IMPORTANT: This docker image must already exist and have the tools you need for your dev workflow.
 codebox init --image node:18
 
 # Register projects
@@ -21,7 +22,7 @@ codebox project add /path/to/project
 codebox project list
 codebox project remove /path/to/project
 
-# Start MCP server
+# This would be called by the agent via MCP.
 codebox start
 ```
 
