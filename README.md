@@ -122,24 +122,29 @@ Large directory listings or file contents can consume significant tokens. To avo
 2. Skip dependency/build directories (node_modules, dist, target, etc)
 3. Preview files before full reads
 4. Request specific files rather than entire directories
+5. Check file sizes before requesting full content (use 'wc -c <filename>' or 'ls -l')
 
 Efficient workflow example:
 GOOD:
 > list_projects
 > execute_command {projectDir: "/path", command: "ls src"}
+> execute_command {projectDir: "/path", command: "ls -l src/config.ts"} # Check file size
 > execute_command {projectDir: "/path", command: "head -n 20 src/config.ts"}
 > write_file {projectDir: "/path", filePath: "src/config.ts", content: "..."}
 
 BAD (wastes tokens):
 > execute_command {projectDir: "/path", command: "find . -type f"} // Lists everything
 > execute_command {projectDir: "/path", command: "cat node_modules/package/README.md"}
+> execute_command {projectDir: "/path", command: "cat src/large-file.ts"} // Without checking size first
 
 Remember:
 - Work incrementally through directories
 - Avoid large file reads unless necessary, ask for permission as needed
+- Check file sizes before requesting full content (files >100KB can waste many tokens)
 - Commands execute in an isolated Docker container
 - You must use write_file to write file content, instead of something like echoing to a file.
-- If the use asks for the output of a command, you may print the output of execute_command verbatim in a markdown codeblock.
+- If the user asks for the output of a command, you may print the output of execute_command verbatim in a markdown codeblock.
+- Of course, if you know the sizes of files you're requesting (via a previous 'ls' for example), you don't need to ask every time.
 ```
 
 ## License
