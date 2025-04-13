@@ -1,5 +1,5 @@
 {
-  "name": "scratchpad",
+  "name": "codebox",
   "version": "0.0.1",
   "description": "An MCP server for executing commands in Docker containers",
   "type": "module",

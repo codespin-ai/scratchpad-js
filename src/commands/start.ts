@@ -35,7 +35,7 @@ function getProjects(): string[] {
 }
 
 function getDockerImage(projectDir: string): string | null {
-  const configFile = path.join(projectDir, ".codespin", "scratchpad.json");
+  const configFile = path.join(projectDir, ".codespin", "codebox.json");
   
   if (!fs.existsSync(configFile)) {
     return null;
@@ -51,12 +51,12 @@ function getDockerImage(projectDir: string): string | null {
 }
 
 export async function start(context: CommandContext): Promise<void> {
-  console.error("Starting Scratchpad MCP server");
+  console.error("Starting Codebox MCP server");
 
   // Create the MCP server
   const server = new McpServer(
     {
-      name: "scratchpad",
+      name: "codebox",
       version: "1.0.0",
     },
     {
@@ -101,7 +101,7 @@ export async function start(context: CommandContext): Promise<void> {
           content: [
             {
               type: "text",
-              text: `Error: No Docker image configured for this project. Run 'scratchpad init' in the project directory.`,
+              text: `Error: No Docker image configured for this project. Run 'codebox init' in the project directory.`,
             },
           ],
         };
@@ -174,7 +174,7 @@ export async function start(context: CommandContext): Promise<void> {
             content: [
               {
                 type: "text",
-                text: "No projects are registered. Use 'scratchpad project add <dirname>' to add projects.",
+                text: "No projects are registered. Use 'codebox project add <dirname>' to add projects.",
               },
             ],
           };
@@ -200,5 +200,5 @@ export async function start(context: CommandContext): Promise<void> {
   // Start the server
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("Scratchpad MCP server running. Waiting for commands...");
+  console.error("Codebox MCP server running. Waiting for commands...");
 }

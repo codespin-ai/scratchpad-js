@@ -37,7 +37,7 @@ export async function init(
     fs.mkdirSync(configDir, { recursive: true });
   }
 
-  const configFile = path.join(configDir, "scratchpad.json");
+  const configFile = path.join(configDir, "codebox.json");
 
   // Check if config file already exists and we're not forcing
   if (fs.existsSync(configFile) && !force) {

@@ -1,6 +1,6 @@
-# Scratchpad
+# Codebox
 
-Scratchpad is a development tool that lets you execute commands in Docker containers for your projects. It provides an MCP (Model Context Protocol) server that allows controlled execution environments for your code, making it ideal for testing, development, and AI-assisted coding workflows.
+Codebox is a development tool that lets you execute commands in Docker containers for your projects. It provides an MCP (Model Context Protocol) server that allows controlled execution environments for your code, making it ideal for testing, development, and AI-assisted coding workflows.
 
 ## Features
 
@@ -14,10 +14,10 @@ Scratchpad is a development tool that lets you execute commands in Docker contai
 
 ```bash
 # Install globally
-npm install -g scratchpad
+npm install -g codebox
 
 # Or use with npx
-npx scratchpad [command]
+npx codebox [command]
 ```
 
 ## Requirements
@@ -32,22 +32,22 @@ npx scratchpad [command]
 
 ```bash
 cd your-git-project
-scratchpad init --image node:18
+codebox init --image node:18
 ```
 
 This will:
 - Verify you're in a git repository
-- Create a `.codespin/scratchpad.json` configuration file with the specified Docker image
+- Create a `.codespin/codebox.json` configuration file with the specified Docker image
 - Use `--force` to overwrite an existing configuration
 
 ### Add Projects to Your Scratchpad Registry
 
 ```bash
 # Add a project directory
-scratchpad project add /path/to/your/project
+codebox project add /path/to/your/project
 
 # Remove a project
-scratchpad project remove /path/to/your/project
+codebox project remove /path/to/your/project
 ```
 
 Your project list is stored in `$HOME/.codespin/projects.json`.
@@ -55,7 +55,7 @@ Your project list is stored in `$HOME/.codespin/projects.json`.
 ### Start the MCP Server
 
 ```bash
-scratchpad start
+codebox start
 ```
 
 This starts the MCP server, enabling command execution through the protocol.
@@ -88,7 +88,7 @@ Lists all registered projects.
 
 ## Configuration Files
 
-- Project-specific: `.codespin/scratchpad.json` in each git repository root
+- Project-specific: `.codespin/codebox.json` in each git repository root
 - Global projects list: `$HOME/.codespin/projects.json`
 
 ## Development

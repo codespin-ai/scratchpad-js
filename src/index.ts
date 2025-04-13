@@ -16,14 +16,14 @@ export async function main() {
   yargs(process.argv.slice(2))
     .command(
       "init",
-      "Initialize a scratchpad configuration for a git repository",
+      "Initialize a codebox configuration for a git repository",
       (yargs) =>
         yargs
           .option("force", {
             type: "boolean",
             demandOption: false,
             describe:
-              "Force overwrite the existing scratchpad.json config file",
+              "Force overwrite the existing codebox.json config file",
           })
           .option("image", {
             type: "string",
