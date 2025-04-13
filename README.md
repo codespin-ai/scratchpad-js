@@ -73,6 +73,31 @@ codebox start
 }
 ```
 
+### execute_batch_commands
+
+```typescript
+{
+  projectDir: string; // Absolute project path
+  commands: string[]; // Array of commands to execute in sequence
+  stopOnError: boolean; // Optional: Whether to stop execution if a command fails (default: true)
+}
+```
+
+The batch command tool allows executing multiple commands in sequence with a single LLM call, reducing API costs and improving efficiency. All commands run in the same Docker container session, preserving environment state between commands.
+
+Example usage:
+```json
+{
+  "projectDir": "/path/to/project",
+  "commands": [
+    "npm install",
+    "npm test",
+    "npm run build"
+  ],
+  "stopOnError": true
+}
+```
+
 ### write_file
 
 ```typescript
@@ -113,6 +138,7 @@ Use this for:
 Available tools:
 - list_projects: See available projects
 - execute_command: Run commands in project's Docker container
+- execute_batch_commands: Run multiple commands in sequence with a single call
 - write_file: Create or modify files
 - get_project_config: Get project details
 
@@ -123,6 +149,7 @@ Large directory listings or file contents can consume significant tokens. To avo
 3. Preview files before full reads
 4. Request specific files rather than entire directories
 5. Check file sizes before requesting full content (use 'wc -c <filename>' or 'ls -l')
+6. Use execute_batch_commands for predictable command sequences
 
 Efficient workflow example:
 GOOD:
@@ -131,6 +158,7 @@ GOOD:
 > execute_command {projectDir: "/path", command: "ls -l src/config.ts"} # Check file size
 > execute_command {projectDir: "/path", command: "head -n 20 src/config.ts"}
 > write_file {projectDir: "/path", filePath: "src/config.ts", content: "..."}
+> execute_batch_commands {projectDir: "/path", commands: ["npm install", "npm test"]}
 
 BAD (wastes tokens):
 > execute_command {projectDir: "/path", command: "find . -type f"} // Lists everything
@@ -145,6 +173,7 @@ Remember:
 - You must use write_file to write file content, instead of something like echoing to a file.
 - If the user asks for the output of a command, you may print the output of execute_command verbatim in a markdown codeblock.
 - Of course, if you know the sizes of files you're requesting (via a previous 'ls' for example), you don't need to ask every time.
+- Use batch commands when you know a fixed sequence of commands needs to be executed. This saves API costs and time.
 ```
 
 ## License

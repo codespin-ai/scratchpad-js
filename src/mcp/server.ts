@@ -4,6 +4,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { registerFileTools } from "./tools/files.js";
 import { registerProjectTools } from "./tools/projects.js";
 import { registerExecuteTools } from "./tools/execute.js";
+import { registerBatchTools } from "./tools/batch.js";
 
 export async function createServer(): Promise<McpServer> {
   const server = new McpServer(
@@ -24,6 +25,7 @@ export async function createServer(): Promise<McpServer> {
   registerFileTools(server);
   registerProjectTools(server);
   registerExecuteTools(server);
+  registerBatchTools(server);
 
   return server;
 }
