@@ -1,114 +1,89 @@
 # Codebox
 
-Codebox executes commands in Docker containers with local filesystem access. Built for developers who need isolated environments for testing, development, or running untrusted code.
+Executes commands in Docker containers with local filesystem access. Built for secure command execution in development workflows.
 
-## Core Functionality
-
-- Runs commands in isolated Docker containers with your project files mounted
-- Tracks multiple project directories across your system
-- Exposes an MCP (Model Context Protocol) server for programmatic access
-- Integrates with git repositories for project scoping
-
-## Prerequisites
-
-- Node.js v16+
-- Docker daemon running
-- Git
-
-## Installation
+## Install
 
 ```bash
 npm install -g @codespin/codebox
 ```
 
-## Setup
+Requires Node.js v16+, Docker daemon, Git.
 
-Initialize a project:
+## Usage
 
 ```bash
-cd your-project
+# Initialize project with Docker image
 codebox init --image node:18
-```
 
-This creates `.codespin/codebox.json` with your Docker image configuration.
-
-Register projects for access:
-
-```bash
-# Add project
+# Register projects
 codebox project add /path/to/project
-
-# List registered projects
 codebox project list
-
-# Remove project
 codebox project remove /path/to/project
-```
 
-Start the MCP server:
-
-```bash
+# Start MCP server
 codebox start
 ```
 
-## Architecture
-
-Codebox works by:
-
-1. Mounting your project directory at `/home/project` inside the container
-2. Running commands in the specified Docker environment
-3. Streaming output back to the client
-
-This provides isolation while maintaining access to local files.
-
-## MCP Server API
+## MCP Tools
 
 ### execute_command
 
-Runs a command in the project's Docker container
+```typescript
+{
+  command: string; // Command to execute
+  projectDir: string; // Absolute project path
+}
+```
 
-Parameters:
+### write_file
 
-- `command`: Shell command to execute
-- `projectDir`: Absolute path to project directory
+```typescript
+{
+  projectDir: string; // Absolute project path
+  filePath: string; // Relative path from project root
+  content: string; // Content to write
+  mode: "overwrite" | "append";
+}
+```
 
 ### list_projects
 
-Returns all registered project paths
+Lists registered projects with status.
 
-## Configuration
+### get_project_config
 
-Project-level (`.codespin/codebox.json`):
-
-```json
+```typescript
 {
-  "dockerImage": "node:18"
+  projectDir: string; // Absolute project path
 }
 ```
 
-Global (`$HOME/.codespin/projects.json`):
+## Agent Prompt
 
-```json
-{
-  "projects": ["/path/to/project1", "/path/to/project2"]
-}
 ```
+You can execute commands in Docker containers using Codebox. Key workflow:
 
-## Security
+1. Check available projects:
+   - list_projects to see registered paths
+   - get_project_config for specific project details
 
-- Commands can only be executed in registered project directories
-- Projects must be explicitly registered using `codebox project add` before use
-- Each project requires its own Docker configuration
-- Project directories are mounted read-write in containers at `/home/project`
+2. File operations:
+   - Use execute_command with standard unix commands (ls, cat) to explore
+   - Use write_file for file modifications
+   - Work directory by directory to minimize token usage
+   - Avoid listing node_modules, dist, etc.
 
-## Development
+3. Command execution:
+   - Commands run in project's Docker container
+   - Project files mounted at /home/project
+   - Provide exact commands, wait for output
 
-```bash
-# Build
-npm run build
-
-# Run locally
-npm start -- [command]
+Example workflow:
+> list_projects
+> execute_command {projectDir: "/path", command: "ls src"}
+> execute_command {projectDir: "/path", command: "cat src/config.ts"}
+> write_file {projectDir: "/path", filePath: "src/config.ts", content: "..."}
 ```
 
 ## License
