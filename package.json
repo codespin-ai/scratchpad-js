@@ -1,6 +1,6 @@
 {
-  "name": "codebox-js",
-  "version": "1.0.0",
+  "name": "scratchpad",
+  "version": "0.0.1",
   "description": "An MCP server for executing commands in Docker containers",
   "type": "module",
   "main": "dist/index.js",
