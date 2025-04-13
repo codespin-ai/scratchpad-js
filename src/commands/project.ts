@@ -93,3 +93,41 @@ export async function removeProject(
     console.log(`Project not found in list: ${projectPath}`);
   }
 }
+
+export async function listProjects(context: CommandContext): Promise<void> {
+  const projectsData = getProjects();
+
+  if (projectsData.projects.length === 0) {
+    console.log(
+      "No projects are registered. Use 'codebox project add <dirname>' to add projects."
+    );
+    return;
+  }
+
+  console.log("Registered projects:");
+  console.log("-------------------");
+
+  projectsData.projects.forEach((projectPath, index) => {
+    // Check if the project has a codebox configuration
+    const configFile = path.join(projectPath, ".codespin", "codebox.json");
+    const hasConfig = fs.existsSync(configFile);
+
+    // Get the Docker image if configuration exists
+    let dockerImage = "";
+    if (hasConfig) {
+      try {
+        const config = JSON.parse(fs.readFileSync(configFile, "utf8"));
+        dockerImage = config.dockerImage || "No image specified";
+      } catch {
+        dockerImage = "Invalid configuration";
+      }
+    }
+
+    console.log(`${index + 1}. ${projectPath}`);
+    console.log(`   Status: ${hasConfig ? "Configured" : "Not configured"}`);
+    if (hasConfig) {
+      console.log(`   Docker Image: ${dockerImage}`);
+    }
+    console.log();
+  });
+}

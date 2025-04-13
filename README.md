@@ -1,107 +1,113 @@
 # Codebox
 
-Codebox is a development tool that lets you execute commands in Docker containers for your projects. It provides an MCP (Model Context Protocol) server that allows controlled execution environments for your code, making it ideal for testing, development, and AI-assisted coding workflows.
+Codebox executes commands in Docker containers with local filesystem access. Built for developers who need isolated environments for testing, development, or running untrusted code.
 
-## Features
+## Core Functionality
 
-- Execute commands in isolated Docker containers with your project files mounted
-- Manage multiple projects across your system
-- Simple CLI interface for configuration and server management
-- Seamless integration with git repositories
-- Built on the Model Context Protocol for easy integration with AI tools
+- Runs commands in isolated Docker containers with your project files mounted
+- Tracks multiple project directories across your system
+- Exposes an MCP (Model Context Protocol) server for programmatic access
+- Integrates with git repositories for project scoping
+
+## Prerequisites
+
+- Node.js v16+
+- Docker daemon running
+- Git
 
 ## Installation
 
 ```bash
-# Install globally
-npm install -g codebox
-
-# Or use with npx
-npx codebox [command]
+npm install -g @codespin/codebox
 ```
 
-## Requirements
+## Setup
 
-- Node.js (v16 or newer)
-- Docker installed and running
-- Git (for repository management)
-
-## Usage
-
-### Initialize a Scratchpad in a Git Repository
+Initialize a project:
 
 ```bash
-cd your-git-project
+cd your-project
 codebox init --image node:18
 ```
 
-This will:
-- Verify you're in a git repository
-- Create a `.codespin/codebox.json` configuration file with the specified Docker image
-- Use `--force` to overwrite an existing configuration
+This creates `.codespin/codebox.json` with your Docker image configuration.
 
-### Add Projects to Your Scratchpad Registry
+Register projects for access:
 
 ```bash
-# Add a project directory
-codebox project add /path/to/your/project
+# Add project
+codebox project add /path/to/project
 
-# Remove a project
-codebox project remove /path/to/your/project
+# List registered projects
+codebox project list
+
+# Remove project
+codebox project remove /path/to/project
 ```
 
-Your project list is stored in `$HOME/.codespin/projects.json`.
-
-### Start the MCP Server
+Start the MCP server:
 
 ```bash
 codebox start
 ```
 
-This starts the MCP server, enabling command execution through the protocol.
+## Architecture
 
-## How It Works
+Codebox works by:
 
-Scratchpad uses Docker containers to provide isolated environments for running commands. When you execute a command:
+1. Mounting your project directory at `/home/project` inside the container
+2. Running commands in the specified Docker environment
+3. Streaming output back to the client
 
-1. Your project directory is mounted inside the container at `/home/project`
-2. The command runs in the specified Docker environment
-3. Output is captured and returned
+This provides isolation while maintaining access to local files.
 
-This ensures consistent execution environments and protects your host system from potentially harmful commands.
+## MCP Server API
 
-## MCP Server Tools
+### execute_command
 
-The MCP server provides the following tools:
-
-### `execute_command`
-
-Executes a command in a Docker container for a specific project.
+Runs a command in the project's Docker container
 
 Parameters:
-- `command`: The command to execute in the container
-- `projectDir`: The absolute path to the project directory
 
-### `list_projects`
+- `command`: Shell command to execute
+- `projectDir`: Absolute path to project directory
 
-Lists all registered projects.
+### list_projects
 
-## Configuration Files
+Returns all registered project paths
 
-- Project-specific: `.codespin/codebox.json` in each git repository root
-- Global projects list: `$HOME/.codespin/projects.json`
+## Configuration
+
+Project-level (`.codespin/codebox.json`):
+
+```json
+{
+  "dockerImage": "node:18"
+}
+```
+
+Global (`$HOME/.codespin/projects.json`):
+
+```json
+{
+  "projects": ["/path/to/project1", "/path/to/project2"]
+}
+```
+
+## Security
+
+- Commands can only be executed in registered project directories
+- Projects must be explicitly registered using `codebox project add` before use
+- Each project requires its own Docker configuration
+- Project directories are mounted read-write in containers at `/home/project`
 
 ## Development
 
-To build the project:
-
 ```bash
+# Build
 npm run build
-```
 
-To run locally:
-
-```bash
+# Run locally
 npm start -- [command]
 ```
 

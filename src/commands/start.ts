@@ -1,3 +1,4 @@
+// src/commands/start.ts
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import * as path from "node:path";
@@ -20,11 +21,11 @@ function getProjectsFile(): string {
 
 function getProjects(): string[] {
   const projectsFile = getProjectsFile();
-  
+
   if (!fs.existsSync(projectsFile)) {
     return [];
   }
-  
+
   try {
     const data = JSON.parse(fs.readFileSync(projectsFile, "utf8"));
     return data.projects || [];
@@ -36,11 +37,11 @@ function getProjects(): string[] {
 
 function getDockerImage(projectDir: string): string | null {
   const configFile = path.join(projectDir, ".codespin", "codebox.json");
-  
+
   if (!fs.existsSync(configFile)) {
     return null;
   }
-  
+
   try {
     const config = JSON.parse(fs.readFileSync(configFile, "utf8"));
     return config.dockerImage || null;
@@ -81,6 +82,22 @@ export async function start(context: CommandContext): Promise<void> {
     async ({ command, projectDir }) => {
       // Validate project directory
       const resolvedPath = path.resolve(projectDir);
+
+      // Get registered projects and check if project is registered
+      const registeredProjects = getProjects();
+      if (!registeredProjects.includes(resolvedPath)) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Error: Project directory is not registered. Use 'codebox project add' first.`,
+            },
+          ],
+        };
+      }
+
+      // Check if directory exists
       if (!fs.existsSync(resolvedPath)) {
         return {
           isError: true,
@@ -161,41 +178,36 @@ export async function start(context: CommandContext): Promise<void> {
   );
 
   // Tool to list available project directories
-  server.tool(
-    "list_projects",
-    "List available projects",
-    {},
-    async () => {
-      try {
-        const projects = getProjects();
+  server.tool("list_projects", "List available projects", {}, async () => {
+    try {
+      const projects = getProjects();
 
-        if (projects.length === 0) {
-          return {
-            content: [
-              {
-                type: "text",
-                text: "No projects are registered. Use 'codebox project add <dirname>' to add projects.",
-              },
-            ],
-          };
-        }
-
+      if (projects.length === 0) {
         return {
           content: [
             {
               type: "text",
-              text: `Available projects:\n\n${projects.join("\n")}`,
+              text: "No projects are registered. Use 'codebox project add <dirname>' to add projects.",
             },
           ],
         };
-      } catch (error) {
-        return {
-          isError: true,
-          content: [{ type: "text", text: `Error listing projects: ${error}` }],
-        };
       }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Available projects:\n\n${projects.join("\n")}`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        isError: true,
+        content: [{ type: "text", text: `Error listing projects: ${error}` }],
+      };
     }
-  );
+  });
 
   // Start the server
   const transport = new StdioServerTransport();

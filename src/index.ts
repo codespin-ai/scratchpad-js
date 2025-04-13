@@ -3,7 +3,7 @@
 import yargs from "yargs";
 import { init } from "./commands/init.js";
 import { start } from "./commands/start.js";
-import { addProject, removeProject } from "./commands/project.js";
+import { addProject, listProjects, removeProject } from "./commands/project.js";
 import { setInvokeMode } from "./utils/invokeMode.js";
 import process from "node:process";
 
@@ -22,8 +22,7 @@ export async function main() {
           .option("force", {
             type: "boolean",
             demandOption: false,
-            describe:
-              "Force overwrite the existing codebox.json config file",
+            describe: "Force overwrite the existing codebox.json config file",
           })
           .option("image", {
             type: "string",
@@ -32,7 +31,7 @@ export async function main() {
           }),
       async (argv) => {
         await init(argv as any, { workingDir: process.cwd() });
-        writeToConsole("Scratchpad initialization completed.");
+        writeToConsole("Codebox initialization completed.");
       }
     )
     .command(
@@ -76,12 +75,19 @@ export async function main() {
               await removeProject(argv as any, { workingDir: process.cwd() });
             }
           )
-          .demandCommand(1, "You must specify a project command (add/remove)");
+          .demandCommand(1, "You must specify a project command (add/remove)")
+          .command("list", "List all registered projects", {}, async () => {
+            await listProjects({ workingDir: process.cwd() });
+          })
+          .demandCommand(
+            1,
+            "You must specify a project command (add/remove/list)"
+          );
       },
       () => {}
     )
     .command("version", "Display the current version", {}, async () => {
-      writeToConsole("Scratchpad v1.0.0");
+      writeToConsole("Codebox v1.0.0");
     })
     .demandCommand(1, "You need to specify a command")
     .showHelpOnFail(true)

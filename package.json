@@ -1,6 +1,6 @@
 {
-  "name": "codebox",
-  "version": "0.0.1",
+  "name": "@codespin/codebox",
+  "version": "0.0.3",
   "description": "An MCP server for executing commands in Docker containers",
   "type": "module",
   "main": "dist/index.js",
