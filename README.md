@@ -1,6 +1,10 @@
 # Codebox
 
-Built to LLM Agents to make code changes safely. Executes commands in Docker containers with local filesystem access scoped to project directories.
+Built for LLM Agents to make code changes safely. Executes commands in Docker containers with local filesystem access scoped to project directories.
+
+## What is MCP?
+
+MCP (Model Context Protocol) is a standardized interface for tools that interact with LLMs, enabling structured function calling and context management.
 
 ## Install
 
@@ -10,11 +14,17 @@ npm install -g @codespin/codebox
 
 Requires Node.js v16+, Docker daemon, Git.
 
+## Architecture
+
+- Commands execute in isolated Docker containers with volume mounts to project directories
+- File operations are constrained to registered project paths
+- Containers have network access but isolated filesystem
+
 ## Usage
 
 ```bash
 # Initialize project with Docker image
-# IMPORTANT: This docker image must already exist and have the tools you need for your dev workflow.
+# Creates .codespin/codebox.json with project config
 codebox init --image node:18
 
 # Register projects
@@ -22,7 +32,33 @@ codebox project add /path/to/project
 codebox project list
 codebox project remove /path/to/project
 
-# This would be called by the agent via MCP.
+# Start MCP server
+codebox start
+```
+
+## Docker Image Requirements
+
+The Docker image must:
+
+- Contain all development tools needed (compilers, interpreters, package managers)
+- Have compatible versions with your project dependencies
+- Be pre-built and available locally or in a registry
+
+## Complete Workflow Example
+
+```bash
+# Setup project
+mkdir my-project && cd my-project
+git init
+npm init -y
+
+# Initialize codebox with Node.js image
+codebox init --image node:18
+
+# Register the project
+codebox project add $(pwd)
+
+# Start MCP server for agent interaction
 codebox start
 ```
 
