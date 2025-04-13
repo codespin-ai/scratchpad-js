@@ -1,21 +1,3 @@
-:::thinking
-I need to create a comprehensive README for a project called "Scratchpad" based on the specifications given. Let's outline what this README should include:
-
-1. Project Title and Description
-2. Installation Instructions
-3. Usage Guide including:
-   - `scratchpad init` - Initialize a new scratchpad in a git repository
-   - `scratchpad start` - Start the MCP server
-   - `scratchpad project add <dirname>` - Add a project to the list
-   - `scratchpad project remove <dirname>` - Remove a project from the list
-4. How it works - explanation of Docker usage
-5. Requirements
-6. Contributing guidelines
-7. License information
-
-Let me draft this README:
-:::
-
 # Scratchpad
 
 Scratchpad is a development tool that lets you execute commands in Docker containers for your projects. It provides an MCP (Model Context Protocol) server that allows controlled execution environments for your code, making it ideal for testing, development, and AI-assisted coding workflows.
@@ -50,14 +32,13 @@ npx scratchpad [command]
 
 ```bash
 cd your-git-project
-scratchpad init
+scratchpad init --image node:18
 ```
 
 This will:
-
 - Verify you're in a git repository
-- Prompt you for a Docker image to use for this project
-- Create a `.codespin/scratchpad.json` configuration file
+- Create a `.codespin/scratchpad.json` configuration file with the specified Docker image
+- Use `--force` to overwrite an existing configuration
 
 ### Add Projects to Your Scratchpad Registry
 
@@ -83,20 +64,46 @@ This starts the MCP server, enabling command execution through the protocol.
 
 Scratchpad uses Docker containers to provide isolated environments for running commands. When you execute a command:
 
-1. Your project directory is mounted inside the container
+1. Your project directory is mounted inside the container at `/home/project`
 2. The command runs in the specified Docker environment
 3. Output is captured and returned
 
 This ensures consistent execution environments and protects your host system from potentially harmful commands.
+
+## MCP Server Tools
+
+The MCP server provides the following tools:
+
+### `execute_command`
+
+Executes a command in a Docker container for a specific project.
+
+Parameters:
+- `command`: The command to execute in the container
+- `projectDir`: The absolute path to the project directory
+
+### `list_projects`
+
+Lists all registered projects.
 
 ## Configuration Files
 
 - Project-specific: `.codespin/scratchpad.json` in each git repository root
 - Global projects list: `$HOME/.codespin/projects.json`
 
-## For Developers
+## Development
 
-Scratchpad uses the Model Context Protocol (MCP) to provide a standardized interface for tools like AI assistants to execute commands in a controlled environment.
+To build the project:
+
+```bash
+npm run build
+```
+
+To run locally:
+
+```bash
+npm start -- [command]
+```
 
 ## License
 

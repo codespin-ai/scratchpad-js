@@ -15,17 +15,17 @@ function getProjectsFile(): string {
   if (!fs.existsSync(configDir)) {
     fs.mkdirSync(configDir, { recursive: true });
   }
-  
+
   return path.join(configDir, "projects.json");
 }
 
 function getProjects(): { projects: string[] } {
   const projectsFile = getProjectsFile();
-  
+
   if (!fs.existsSync(projectsFile)) {
     return { projects: [] };
   }
-  
+
   try {
     return JSON.parse(fs.readFileSync(projectsFile, "utf8"));
   } catch (error) {
@@ -40,26 +40,26 @@ function saveProjects(projectsData: { projects: string[] }): void {
 }
 
 export async function addProject(
-  options: ProjectOptions, 
+  options: ProjectOptions,
   context: CommandContext
 ): Promise<void> {
   const { dirname } = options;
-  
+
   // Resolve to absolute path
   const projectPath = path.resolve(context.workingDir, dirname);
-  
+
   // Check if directory exists
   if (!fs.existsSync(projectPath)) {
     throw new Error(`Directory not found: ${projectPath}`);
   }
-  
+
   if (!fs.statSync(projectPath).isDirectory()) {
     throw new Error(`Path is not a directory: ${projectPath}`);
   }
-  
+
   // Get existing projects
   const projectsData = getProjects();
-  
+
   // Add project if not already in list
   if (!projectsData.projects.includes(projectPath)) {
     projectsData.projects.push(projectPath);
@@ -75,13 +75,13 @@ export async function removeProject(
   context: CommandContext
 ): Promise<void> {
   const { dirname } = options;
-  
+
   // Resolve to absolute path
   const projectPath = path.resolve(context.workingDir, dirname);
-  
+
   // Get existing projects
   const projectsData = getProjects();
-  
+
   // Remove project if found
   const index = projectsData.projects.indexOf(projectPath);
   if (index !== -1) {
@@ -89,6 +89,7 @@ export async function removeProject(
     saveProjects(projectsData);
     console.log(`Removed project: ${projectPath}`);
   } else {
-    throw new Error(`Project not found in list: ${projectPath}`);
+    // Now just logging the message instead of throwing
+    console.log(`Project not found in list: ${projectPath}`);
   }
 }

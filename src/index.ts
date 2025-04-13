@@ -44,32 +44,41 @@ export async function main() {
       }
     )
     .command(
-      "project add <dirname>",
-      "Add a project directory to the registry",
-      (yargs) =>
-        yargs.positional("dirname", {
-          describe: "Path to the project directory",
-          demandOption: true,
-          type: "string",
-        }),
-      async (argv) => {
-        await addProject(argv as any, { workingDir: process.cwd() });
-        writeToConsole(`Project ${argv.dirname} successfully added.`);
-      }
-    )
-    .command(
-      "project remove <dirname>",
-      "Remove a project directory from the registry",
-      (yargs) =>
-        yargs.positional("dirname", {
-          describe: "Path to the project directory to remove",
-          demandOption: true,
-          type: "string",
-        }),
-      async (argv) => {
-        await removeProject(argv as any, { workingDir: process.cwd() });
-        writeToConsole(`Project ${argv.dirname} successfully removed.`);
-      }
+      "project",
+      "Project management commands",
+      (yargs) => {
+        return yargs
+          .command(
+            "add <dirname>",
+            "Add a project directory to the registry",
+            (yargs) => {
+              return yargs.positional("dirname", {
+                describe: "Path to the project directory",
+                type: "string",
+                demandOption: true,
+              });
+            },
+            async (argv) => {
+              await addProject(argv as any, { workingDir: process.cwd() });
+            }
+          )
+          .command(
+            "remove <dirname>",
+            "Remove a project directory from the registry",
+            (yargs) => {
+              return yargs.positional("dirname", {
+                describe: "Path to the project directory to remove",
+                type: "string",
+                demandOption: true,
+              });
+            },
+            async (argv) => {
+              await removeProject(argv as any, { workingDir: process.cwd() });
+            }
+          )
+          .demandCommand(1, "You must specify a project command (add/remove)");
+      },
+      () => {}
     )
     .command("version", "Display the current version", {}, async () => {
       writeToConsole("Scratchpad v1.0.0");
