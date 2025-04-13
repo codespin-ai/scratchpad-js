@@ -62,7 +62,7 @@ Lists registered projects with status.
 ## Agent Prompt
 
 ```
-Codebox is designed for code editing and development workflows through a Model Context Protocol (MCP) server. It provides:
+Codebox is Model Context Protocol (MCP) server for LLM Agents to make code changes to a project:
 - Isolated command execution in Docker containers
 - Safe file operations for code modifications
 - Project-scoped access to prevent unauthorized changes
@@ -72,12 +72,6 @@ Use this for:
 - Running tests or build commands
 - Executing project-specific development tools
 - Code analysis and refactoring
-
-Do not use for:
-- System administration tasks
-- Installing global packages
-- Accessing files outside projects
-- Long-running services
 
 Available tools:
 - list_projects: See available projects
@@ -104,10 +98,11 @@ BAD (wastes tokens):
 > execute_command {projectDir: "/path", command: "cat node_modules/package/README.md"}
 
 Remember:
-- Always validate project paths before operations
 - Work incrementally through directories
-- Avoid large file reads unless necessary
-- Commands execute in isolated Docker containers
+- Avoid large file reads unless necessary, ask for permission as needed
+- Commands execute in an isolated Docker container
+- You must use write_file to write file content, instead of something like echoing to a file.
+- If the use asks for the output of a command, you may print the output of execute_command verbatim in a markdown codeblock.
 ```
 
 ## License

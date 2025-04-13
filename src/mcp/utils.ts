@@ -7,6 +7,9 @@ import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
+const uid = process.getuid?.();
+const gid = process.getgid?.();
+
 export interface ExecuteResult {
   stdout: string;
   stderr: string;
@@ -75,10 +78,11 @@ export async function executeInContainer(
   command: string,
   dockerImage: string
 ): Promise<ExecuteResult> {
-  const dockerCommand = `docker run -i --rm -v "${projectDir}:/home/project" --workdir="/home/project" ${dockerImage} /bin/sh -c "${command.replace(
-    /"/g,
-    '\\"'
-  )}"`;
+  const dockerCommand = `docker run -i --rm \
+  -v "${projectDir}:/home/project" \
+  --workdir="/home/project" \
+  --user=${uid}:${gid} \
+  ${dockerImage} /bin/sh -c "${command}"`;
 
   try {
     return await execAsync(dockerCommand, {
