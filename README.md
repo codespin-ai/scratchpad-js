@@ -2,10 +2,6 @@
 
 Built for LLM Agents to make code changes safely. Executes commands in Docker containers with local filesystem access scoped to project directories.
 
-## What is MCP?
-
-MCP (Model Context Protocol) is a standardized interface for tools that interact with LLMs, enabling structured function calling and context management.
-
 ## Install
 
 ```bash
@@ -36,7 +32,7 @@ codebox project add /path/to/project
 codebox project list
 codebox project remove /path/to/project
 
-# Start MCP server
+# This is called by the client (don't do this manually)
 codebox start
 ```
 
