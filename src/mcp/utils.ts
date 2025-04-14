@@ -37,13 +37,26 @@ export function getProjects(): string[] {
 
 export function validateProject(projectDir: string): boolean {
   const resolvedPath = path.resolve(projectDir);
-  const registeredProjects = getProjects();
-
-  return (
-    registeredProjects.includes(resolvedPath) &&
-    fs.existsSync(resolvedPath) &&
-    fs.statSync(resolvedPath).isDirectory()
-  );
+  // Ensure path exists and is a directory
+  if (!fs.existsSync(resolvedPath) || !fs.statSync(resolvedPath).isDirectory()) {
+    return false;
+  }
+  
+  // Normalize paths by removing trailing slashes for consistent comparison
+  const normalizedInputPath = resolvedPath.replace(/\/+$/, "");
+  const registeredProjects = getProjects().map(p => p.replace(/\/+$/, ""));
+  
+  // Check if the normalized input path is a subdirectory of any registered project
+  for (const registeredPath of registeredProjects) {
+    // Check if the input path starts with a registered path followed by either
+    // end of string or a path separator
+    if (normalizedInputPath === registeredPath || 
+        normalizedInputPath.startsWith(registeredPath + path.sep)) {
+      return true;
+    }
+  }
+  
+  return false;
 }
 
 export function validateFilePath(
