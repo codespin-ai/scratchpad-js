@@ -38,24 +38,29 @@ export function getProjects(): string[] {
 export function validateProject(projectDir: string): boolean {
   const resolvedPath = path.resolve(projectDir);
   // Ensure path exists and is a directory
-  if (!fs.existsSync(resolvedPath) || !fs.statSync(resolvedPath).isDirectory()) {
+  if (
+    !fs.existsSync(resolvedPath) ||
+    !fs.statSync(resolvedPath).isDirectory()
+  ) {
     return false;
   }
-  
+
   // Normalize paths by removing trailing slashes for consistent comparison
   const normalizedInputPath = resolvedPath.replace(/\/+$/, "");
-  const registeredProjects = getProjects().map(p => p.replace(/\/+$/, ""));
-  
+  const registeredProjects = getProjects().map((p) => p.replace(/\/+$/, ""));
+
   // Check if the normalized input path is a subdirectory of any registered project
   for (const registeredPath of registeredProjects) {
     // Check if the input path starts with a registered path followed by either
     // end of string or a path separator
-    if (normalizedInputPath === registeredPath || 
-        normalizedInputPath.startsWith(registeredPath + path.sep)) {
+    if (
+      normalizedInputPath === registeredPath ||
+      normalizedInputPath.startsWith(registeredPath + path.sep)
+    ) {
       return true;
     }
   }
-  
+
   return false;
 }
 
@@ -72,11 +77,11 @@ export function validateFilePath(
 
 export function getSystemConfig(): { dockerImage?: string } | null {
   const configFile = getProjectsFile();
-  
+
   if (!fs.existsSync(configFile)) {
     return null;
   }
-  
+
   try {
     return JSON.parse(fs.readFileSync(configFile, "utf8"));
   } catch (error) {
@@ -99,7 +104,7 @@ export function getDockerImage(projectDir: string): string | null {
       console.error(`Failed to parse config file for ${projectDir}`);
     }
   }
-  
+
   // Fallback to system-level configuration
   const systemConfig = getSystemConfig();
   return systemConfig?.dockerImage || null;
@@ -121,6 +126,14 @@ export async function executeInContainer(
       maxBuffer: 10 * 1024 * 1024, // 10MB buffer
     });
   } catch (error: any) {
-    throw new Error(`Docker execution failed: ${error.message}`);
+    const stdout = error.stdout || "";
+    const stderr = error.stderr || "";
+    const combinedOutput = `${stdout}${stderr ? `\nSTDERR:\n${stderr}` : ""}`;
+
+    throw new Error(
+      `Docker execution failed:\n${
+        error.message ? error.message + "\n" : ""
+      }${combinedOutput}`
+    );
   }
 }
