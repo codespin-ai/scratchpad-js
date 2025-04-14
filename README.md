@@ -8,7 +8,7 @@ Built for LLM Agents to make code changes safely. Executes commands in Docker co
 npm install -g @codespin/codebox
 ```
 
-Requires Node.js v16+, Docker daemon, Git.
+Requires Docker installed.
 
 ## Architecture
 
