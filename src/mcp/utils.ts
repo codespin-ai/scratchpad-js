@@ -30,7 +30,7 @@ export function getProjects(): ProjectConfig[] {
   try {
     const data = JSON.parse(fs.readFileSync(projectsFile, "utf8"));
     return Array.isArray(data.projects) ? data.projects : [];
-  } catch (_) {
+  } catch {
     console.error("Failed to parse projects file");
     return [];
   }
@@ -48,7 +48,9 @@ export function validateProject(projectDir: string): boolean {
 
   // Normalize paths by removing trailing slashes for consistent comparison
   const normalizedInputPath = resolvedPath.replace(/\/+$/, "");
-  const registeredProjects = getProjects().map((p) => p.path.replace(/\/+$/, ""));
+  const registeredProjects = getProjects().map((p) =>
+    p.path.replace(/\/+$/, "")
+  );
 
   // Check if the normalized input path is a subdirectory of any registered project
   for (const registeredPath of registeredProjects) {
@@ -85,11 +87,11 @@ export function getSystemConfig(): SystemConfig | null {
 
   try {
     const config = JSON.parse(fs.readFileSync(configFile, "utf8"));
-    return { 
+    return {
       projects: Array.isArray(config.projects) ? config.projects : [],
-      debug: config.debug 
+      debug: config.debug,
     };
-  } catch (_) {
+  } catch {
     console.error("Failed to parse system config file");
     return { projects: [] };
   }
@@ -98,18 +100,18 @@ export function getSystemConfig(): SystemConfig | null {
 export function getDockerImage(projectDir: string): string | null {
   const resolvedPath = path.resolve(projectDir);
   const projects = getProjects();
-  
+
   // Find the project configuration
-  const project = projects.find(p => {
+  const project = projects.find((p) => {
     const normalizedProjectPath = p.path.replace(/\/+$/, "");
     const normalizedInputPath = resolvedPath.replace(/\/+$/, "");
-    
+
     return (
       normalizedInputPath === normalizedProjectPath ||
       normalizedInputPath.startsWith(normalizedProjectPath + path.sep)
     );
   });
-  
+
   return project ? project.dockerImage : null;
 }
 

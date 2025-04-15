@@ -18,7 +18,7 @@ function isDockerAvailable(): boolean {
   try {
     const dockerCheck = spawnSync("docker", ["--version"]);
     return !(dockerCheck.error || dockerCheck.status !== 0);
-  } catch (_) {
+  } catch {
     return false;
   }
 }
