@@ -19,16 +19,8 @@ Requires Docker installed.
 ## Usage
 
 ```bash
-# Initialize project with Docker image
-# Creates .codespin/codebox.json with project config
-codebox init --image node:18
-
-# Initialize system-wide Docker image configuration
-# Creates $HOME/.codespin/codebox.json with global config
-codebox init --system --image node:18
-
-# Register projects
-codebox project add /path/to/project
+# Register projects with Docker images
+codebox project add /path/to/project --image node:18
 codebox project list
 codebox project remove /path/to/project
 
@@ -38,25 +30,31 @@ codebox start
 
 ## Configuration System
 
-Codebox uses a hierarchical configuration system:
+Codebox uses a centralized configuration system. All configuration is stored in a single file at:
 
-1. **Project-specific configuration**: Located at `.codespin/codebox.json` within each project
-2. **System-wide configuration**: Located at `$HOME/.codespin/codebox.json`
+- `$HOME/.codespin/codebox.json`
 
-When a Docker image is needed for a project, Codebox checks:
-
-- First, the project-specific configuration
-- If not found or no `dockerImage` defined, falls back to the system-wide configuration
-
-This allows you to define a default image for all projects while allowing project-specific overrides.
-
-### Debug Logging
-
-You can enable debug logging by adding a `debug` flag to your system-wide configuration:
+The configuration file contains an array of projects, each with its own path and associated Docker image:
 
 ```json
 {
-  "dockerImage": "node:18",
+  "projects": [
+    { "path": "/path/to/project1", "dockerImage": "node:18" },
+    { "path": "/path/to/project2", "dockerImage": "python:3.9" }
+  ],
+  "debug": false
+}
+```
+
+### Debug Logging
+
+You can enable debug logging by adding a `debug` flag to your configuration:
+
+```json
+{
+  "projects": [
+    { "path": "/path/to/project1", "dockerImage": "node:18" }
+  ],
   "debug": true
 }
 ```
@@ -108,14 +106,8 @@ mkdir my-project && cd my-project
 git init
 npm init -y
 
-# Initialize codebox with Node.js image
-codebox init --image node:18
-
-# Or set a system-wide default Docker image
-codebox init --system --image node:18
-
-# Register the project
-codebox project add $(pwd)
+# Register the project with a Docker image
+codebox project add $(pwd) --image node:18
 
 # Start MCP server for agent interaction
 codebox start
@@ -210,9 +202,7 @@ Lists registered projects with status. For each project, shows:
 
 - Path to the project
 - Whether the project exists
-- Configuration status
 - Docker image being used
-- Whether the Docker image is coming from system configuration
 
 ### get_project_config
 

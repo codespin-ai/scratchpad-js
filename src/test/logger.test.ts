@@ -33,24 +33,24 @@ describe("Logger Utility", () => {
     });
 
     it("should return false when debug is not set in config", () => {
-      createTestConfig(testDir, { dockerImage: "node:18" });
+      createTestConfig(testDir, { projects: [] });
       expect(isDebugEnabled()).to.be.false;
     });
 
     it("should return false when debug is explicitly set to false", () => {
-      createTestConfig(testDir, { dockerImage: "node:18", debug: false });
+      createTestConfig(testDir, { projects: [], debug: false });
       expect(isDebugEnabled()).to.be.false;
     });
 
     it("should return true when debug is explicitly set to true", () => {
-      createTestConfig(testDir, { dockerImage: "node:18", debug: true });
+      createTestConfig(testDir, { projects: [], debug: true });
       expect(isDebugEnabled()).to.be.true;
     });
   });
 
   describe("logMcpCall", () => {
     it("should not create log files when debug is disabled", () => {
-      createTestConfig(testDir, { dockerImage: "node:18", debug: false });
+      createTestConfig(testDir, { projects: [], debug: false });
       
       logMcpCall({
         method: "test_method",
@@ -66,7 +66,7 @@ describe("Logger Utility", () => {
     });
 
     it("should create log files when debug is enabled", () => {
-      createTestConfig(testDir, { dockerImage: "node:18", debug: true });
+      createTestConfig(testDir, { projects: [], debug: true });
       
       const startTime = new Date();
       const endTime = new Date(startTime.getTime() + 100); // 100ms later
@@ -93,7 +93,7 @@ describe("Logger Utility", () => {
     });
 
     it("should log error responses correctly", () => {
-      createTestConfig(testDir, { dockerImage: "node:18", debug: true });
+      createTestConfig(testDir, { projects: [], debug: true });
       
       logMcpCall({
         method: "test_method",

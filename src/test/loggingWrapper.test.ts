@@ -21,7 +21,7 @@ describe("Logging Wrapper", () => {
     
     // Create system config with debug enabled
     createTestConfig(testDir, { 
-      dockerImage: "node:18",
+      projects: [],
       debug: true
     });
     

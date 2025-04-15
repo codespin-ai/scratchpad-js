@@ -3,7 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as fs from "fs";
 import * as path from "path";
 import * as zod from "zod";
-import { getProjects, getDockerImage, getSystemConfig } from "../utils.js";
+import { getProjects, getSystemConfig } from "../utils.js";
 
 // Define the input schema type
 const ProjectConfigInput = {
@@ -16,44 +16,26 @@ export function registerProjectTools(server: McpServer): void {
   server.tool("list_projects", "List available projects", {}, async () => {
     try {
       const projects = getProjects();
-      const systemConfig = getSystemConfig();
 
       if (projects.length === 0) {
         return {
           content: [
             {
               type: "text",
-              text: "No projects are registered. Use 'codebox project add <dirname>' to add projects.",
+              text: "No projects are registered. Use 'codebox project add <dirname> --image <image_name>' to add projects.",
             },
           ],
         };
       }
 
       // Build detailed project information
-      const projectDetails = projects.map((projectPath) => {
-        const exists = fs.existsSync(projectPath);
-        const dockerImage = exists ? getDockerImage(projectPath) : null;
+      const projectDetails = projects.map((project) => {
+        const exists = fs.existsSync(project.path);
         
-        // Check if this is using system fallback
-        const configFile = path.join(projectPath, ".codespin", "codebox.json");
-        const hasLocalConfig = exists && fs.existsSync(configFile);
-        let hasLocalDockerImage = false;
-        
-        if (hasLocalConfig) {
-          try {
-            const config = JSON.parse(fs.readFileSync(configFile, "utf8"));
-            hasLocalDockerImage = !!config.dockerImage;
-          } catch {}
-        }
-        
-        const usesSystemConfig = dockerImage && !hasLocalDockerImage && !!systemConfig?.dockerImage;
-
         return {
-          path: projectPath,
+          path: project.path,
           status: exists ? "exists" : "missing",
-          configured: dockerImage ? "yes" : "no",
-          dockerImage: dockerImage || "not configured",
-          usesSystemConfig,
+          dockerImage: project.dockerImage,
         };
       });
 
@@ -62,10 +44,7 @@ export function registerProjectTools(server: McpServer): void {
       projectDetails.forEach((project, index) => {
         output.push(`${index + 1}. ${project.path}`);
         output.push(`   Status: ${project.status}`);
-        output.push(`   Configured: ${project.configured}`);
-        if (project.configured === "yes") {
-          output.push(`   Docker Image: ${project.dockerImage}${project.usesSystemConfig ? " (from system config)" : ""}`);
-        }
+        output.push(`   Docker Image: ${project.dockerImage}`);
         output.push("");
       });
 
@@ -100,15 +79,25 @@ export function registerProjectTools(server: McpServer): void {
       try {
         const projects = getProjects();
         const resolvedPath = path.resolve(projectDir);
-        const systemConfig = getSystemConfig();
+        
+        // Find matching project configuration
+        const project = projects.find(p => {
+          const normalizedProjectPath = p.path.replace(/\/+$/, "");
+          const normalizedInputPath = resolvedPath.replace(/\/+$/, "");
+          
+          return (
+            normalizedInputPath === normalizedProjectPath ||
+            normalizedInputPath.startsWith(normalizedProjectPath + path.sep)
+          );
+        });
 
-        if (!projects.includes(resolvedPath)) {
+        if (!project) {
           return {
             isError: true,
             content: [
               {
                 type: "text",
-                text: "Project is not registered. Use 'codebox project add' first.",
+                text: "Project is not registered. Use 'codebox project add <dirname> --image <image_name>' first.",
               },
             ],
           };
@@ -126,22 +115,6 @@ export function registerProjectTools(server: McpServer): void {
           };
         }
 
-        const dockerImage = getDockerImage(resolvedPath);
-        
-        // Check if this is using system fallback
-        const configFile = path.join(resolvedPath, ".codespin", "codebox.json");
-        const hasLocalConfig = fs.existsSync(configFile);
-        let hasLocalDockerImage = false;
-        
-        if (hasLocalConfig) {
-          try {
-            const config = JSON.parse(fs.readFileSync(configFile, "utf8"));
-            hasLocalDockerImage = !!config.dockerImage;
-          } catch {}
-        }
-        
-        const usesSystemConfig = dockerImage && !hasLocalDockerImage && !!systemConfig?.dockerImage;
-
         return {
           content: [
             {
@@ -150,10 +123,7 @@ export function registerProjectTools(server: McpServer): void {
                 {
                   path: resolvedPath,
                   exists: true,
-                  configured: !!dockerImage,
-                  dockerImage: dockerImage || null,
-                  usesSystemConfig: usesSystemConfig,
-                  systemConfigAvailable: !!systemConfig?.dockerImage,
+                  dockerImage: project.dockerImage,
                 },
                 null,
                 2

@@ -51,9 +51,9 @@ describe("Project MCP Tools", () => {
           }
           
           // Format projects list
-          const projectsList = projects.map((projectPath: string) => {
-            const exists = fs.existsSync(projectPath);
-            return `${projectPath} (${exists ? "Exists" : "Missing"})\n`;
+          const projectsList = projects.map((project: {path: string, dockerImage: string}) => {
+            const exists = fs.existsSync(project.path);
+            return `${project.path} (${exists ? "Exists" : "Missing"})\nDocker Image: ${project.dockerImage}\n`;
           }).join("\n");
           
           return {
@@ -84,52 +84,32 @@ describe("Project MCP Tools", () => {
           // Check if project is registered
           const configPath = path.join(testDir, ".codespin", "codebox.json");
           if (fs.existsSync(configPath)) {
-            const systemConfig = JSON.parse(fs.readFileSync(configPath, "utf8"));
-            const projects = systemConfig.projects || [];
+            const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+            const projects = config.projects || [];
             
-            // Simple validation - verify the project is registered
-            const isRegistered = projects.includes(projectDir);
-            if (!isRegistered) {
+            // Find the project configuration
+            const project = projects.find((p: {path: string}) => p.path === projectDir);
+            
+            if (!project) {
               return {
                 isError: true,
                 content: [{ type: "text", text: `Error: Invalid or unregistered project directory: ${projectDir}` }],
               };
             }
+            
+            const configInfo = `Project: ${projectDir}\n` +
+                             `Docker Image: ${project.dockerImage}\n`;
+            
+            return {
+              isError: false,
+              content: [{ type: "text", text: configInfo }],
+            };
           } else {
             return {
               isError: true,
               content: [{ type: "text", text: `Error: Invalid or unregistered project directory: ${projectDir}` }],
             };
           }
-          
-          // Check for project config
-          const projectConfigPath = path.join(projectDir, ".codespin", "codebox.json");
-          const systemConfigPath = path.join(testDir, ".codespin", "codebox.json");
-          
-          let projectConfig: any = {};
-          let systemConfig: any = {};
-          
-          // Check project config
-          if (fs.existsSync(projectConfigPath)) {
-            projectConfig = JSON.parse(fs.readFileSync(projectConfigPath, "utf8"));
-          }
-          
-          // Check system config
-          if (fs.existsSync(systemConfigPath)) {
-            systemConfig = JSON.parse(fs.readFileSync(systemConfigPath, "utf8"));
-          }
-          
-          // Determine Docker image
-          const dockerImage = projectConfig.dockerImage || systemConfig.dockerImage || "<No Docker image configured>";
-          const usingSystemImage = !projectConfig.dockerImage && systemConfig.dockerImage;
-          
-          const configInfo = `Project: ${projectDir}\n` +
-                           `Docker Image: ${dockerImage}${usingSystemImage ? " (from system config)" : ""}\n`;
-          
-          return {
-            isError: false,
-            content: [{ type: "text", text: configInfo }],
-          };
         } catch (error) {
           return {
             isError: true,
@@ -154,7 +134,7 @@ describe("Project MCP Tools", () => {
   describe("list_projects", () => {
     it("should return empty projects list when no projects are registered", async () => {
       // Create empty system config
-      createTestConfig(testDir, { dockerImage: "node:18" });
+      createTestConfig(testDir, { projects: [] });
       
       // Call the list_projects tool
       const response = await toolRegistration.callTool("list_projects", {});
@@ -173,8 +153,7 @@ describe("Project MCP Tools", () => {
       
       // Create system config with registered project
       createTestConfig(testDir, { 
-        dockerImage: "node:18",
-        projects: [projectPath]
+        projects: [{ path: projectPath, dockerImage: "node:18" }]
       });
       
       // Call the list_projects tool
@@ -185,13 +164,14 @@ describe("Project MCP Tools", () => {
       expect(response).to.have.property('content');
       expect(response.content).to.be.an('array').with.lengthOf(1);
       expect(response.content[0].text).to.include(projectPath);
+      expect(response.content[0].text).to.include('node:18');
     });
   });
 
   describe("get_project_config", () => {
     it("should return error for invalid project", async () => {
       // Create system config
-      createTestConfig(testDir, { dockerImage: "node:18" });
+      createTestConfig(testDir, { projects: [] });
       
       // Call get_project_config with non-registered project
       const invalidPath = path.join(testDir, "non-existent");
@@ -206,24 +186,13 @@ describe("Project MCP Tools", () => {
     });
 
     it("should return project configuration", async () => {
-      // Create test project with configuration
+      // Create test project
       const projectPath = path.join(testDir, "test-project");
       fs.mkdirSync(projectPath, { recursive: true });
       
-      // Create project config
-      const projectConfigDir = path.join(projectPath, ".codespin");
-      fs.mkdirSync(projectConfigDir, { recursive: true });
-      
-      const projectConfig = { dockerImage: "node:latest" };
-      fs.writeFileSync(
-        path.join(projectConfigDir, "codebox.json"), 
-        JSON.stringify(projectConfig, null, 2)
-      );
-      
       // Register project in system config
       createTestConfig(testDir, { 
-        dockerImage: "node:18",
-        projects: [projectPath]
+        projects: [{ path: projectPath, dockerImage: "node:latest" }]
       });
       
       // Call get_project_config

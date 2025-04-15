@@ -19,7 +19,7 @@ export function getProjectsFile(): string {
   return path.join(os.homedir(), ".codespin", "codebox.json");
 }
 
-export function getProjects(): string[] {
+export function getProjects(): Array<{path: string, dockerImage: string}> {
   const projectsFile = getProjectsFile();
 
   if (!fs.existsSync(projectsFile)) {
@@ -28,7 +28,7 @@ export function getProjects(): string[] {
 
   try {
     const data = JSON.parse(fs.readFileSync(projectsFile, "utf8"));
-    return data.projects || [];
+    return Array.isArray(data.projects) ? data.projects : [];
   } catch (error) {
     console.error("Failed to parse projects file");
     return [];
@@ -47,7 +47,7 @@ export function validateProject(projectDir: string): boolean {
 
   // Normalize paths by removing trailing slashes for consistent comparison
   const normalizedInputPath = resolvedPath.replace(/\/+$/, "");
-  const registeredProjects = getProjects().map((p) => p.replace(/\/+$/, ""));
+  const registeredProjects = getProjects().map((p) => p.path.replace(/\/+$/, ""));
 
   // Check if the normalized input path is a subdirectory of any registered project
   for (const registeredPath of registeredProjects) {
@@ -75,7 +75,7 @@ export function validateFilePath(
   return fullPath.startsWith(resolvedProjectDir);
 }
 
-export function getSystemConfig(): { dockerImage?: string } | null {
+export function getSystemConfig(): { debug?: boolean } | null {
   const configFile = getProjectsFile();
 
   if (!fs.existsSync(configFile)) {
@@ -83,7 +83,8 @@ export function getSystemConfig(): { dockerImage?: string } | null {
   }
 
   try {
-    return JSON.parse(fs.readFileSync(configFile, "utf8"));
+    const config = JSON.parse(fs.readFileSync(configFile, "utf8"));
+    return { debug: config.debug };
   } catch (error) {
     console.error("Failed to parse system config file");
     return null;
@@ -91,23 +92,21 @@ export function getSystemConfig(): { dockerImage?: string } | null {
 }
 
 export function getDockerImage(projectDir: string): string | null {
-  // First check project-level configuration
-  const configFile = path.join(projectDir, ".codespin", "codebox.json");
-
-  if (fs.existsSync(configFile)) {
-    try {
-      const config = JSON.parse(fs.readFileSync(configFile, "utf8"));
-      if (config.dockerImage) {
-        return config.dockerImage;
-      }
-    } catch (error) {
-      console.error(`Failed to parse config file for ${projectDir}`);
-    }
-  }
-
-  // Fallback to system-level configuration
-  const systemConfig = getSystemConfig();
-  return systemConfig?.dockerImage || null;
+  const resolvedPath = path.resolve(projectDir);
+  const projects = getProjects();
+  
+  // Find the project configuration
+  const project = projects.find(p => {
+    const normalizedProjectPath = p.path.replace(/\/+$/, "");
+    const normalizedInputPath = resolvedPath.replace(/\/+$/, "");
+    
+    return (
+      normalizedInputPath === normalizedProjectPath ||
+      normalizedInputPath.startsWith(normalizedProjectPath + path.sep)
+    );
+  });
+  
+  return project ? project.dockerImage : null;
 }
 
 export async function executeInContainer(

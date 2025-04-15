@@ -1,49 +1,15 @@
 #!/usr/bin/env node
 
 import yargs from "yargs";
-import { init } from "./commands/init.js";
 import { start } from "./commands/start.js";
 import { addProject, listProjects, removeProject } from "./commands/project.js";
 import { setInvokeMode } from "./utils/invokeMode.js";
 import process from "node:process";
 
-// Export utility functions
-export * as git from "./utils/git.js";
-
 setInvokeMode("cli");
 
 export async function main() {
   yargs(process.argv.slice(2))
-    .command(
-      "init",
-      "Initialize a codebox configuration for a git repository",
-      (yargs) =>
-        yargs
-          .option("force", {
-            type: "boolean",
-            demandOption: false,
-            describe: "Force overwrite the existing codebox.json config file",
-          })
-          .option("image", {
-            type: "string",
-            demandOption: true,
-            describe: "Docker image to use for this project",
-          })
-          .option("system", {
-            type: "boolean",
-            demandOption: false,
-            describe: "Create a system-level configuration at $HOME/.codespin/codebox.json",
-          })
-          .option("debug", {
-            type: "boolean",
-            demandOption: false,
-            describe: "Enable debug logging of MCP calls to $HOME/.codespin/logs",
-          }),
-      async (argv) => {
-        await init(argv as any, { workingDir: process.cwd() });
-        writeToConsole("Codebox initialization completed.");
-      }
-    )
     .command(
       "start",
       "Start the MCP server for executing commands in containers",
@@ -61,11 +27,17 @@ export async function main() {
             "add <dirname>",
             "Add a project directory to the registry",
             (yargs) => {
-              return yargs.positional("dirname", {
-                describe: "Path to the project directory",
-                type: "string",
-                demandOption: true,
-              });
+              return yargs
+                .positional("dirname", {
+                  describe: "Path to the project directory",
+                  type: "string",
+                  demandOption: true,
+                })
+                .option("image", {
+                  type: "string",
+                  demandOption: true,
+                  describe: "Docker image to use for this project",
+                });
             },
             async (argv) => {
               await addProject(argv as any, { workingDir: process.cwd() });

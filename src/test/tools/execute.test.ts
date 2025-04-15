@@ -103,8 +103,7 @@ describe("Execute Commands", function() {
     
     // Register project in system config
     createTestConfig(testDir, { 
-      dockerImage: dockerImage,
-      projects: [projectPath]
+      projects: [{ path: projectPath, dockerImage: dockerImage }]
     });
     
     // Set up test tool registration

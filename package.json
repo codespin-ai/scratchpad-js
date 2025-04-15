@@ -1,6 +1,6 @@
 {
   "name": "@codespin/codebox",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "description": "An MCP server for executing commands in Docker containers",
   "type": "module",
   "main": "dist/index.js",
@@ -8,46 +8,39 @@
     "clean": "rm -rf ./dist",
     "build": "npm run clean && npx tsc",
     "start": "node dist/index.js",
-    "test": "npm run build && npx mocha \"dist/test/**/*.test.js\" \"dist/test/*.test.js\" \"dist/src/test/**/*.test.js\" \"dist/src/test/*.test.js\"",
-    "test:init": "npm run build && npx mocha \"dist/test/init*.test.js\"",
-    "test:execute": "npm run build && npx mocha \"dist/src/test/tools/execute.test.js\"",
-    "test:grep": "npm run build && npx mocha \"dist/test/**/*.test.js\" \"dist/test/*.test.js\" \"dist/src/test/**/*.test.js\" \"dist/src/test/*.test.js\" --grep",
+    "test": "npm run build && npx mocha \"dist/test/**/*.test.js\"",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
   "bin": {
     "codebox": "dist/index.js"
   },
-  "files": [
-    "dist"
-  ],
   "keywords": [
     "mcp",
     "docker",
-    "ai"
+    "llm"
   ],
-  "author": "",
+  "author": "Codespin AI",
   "license": "MIT",
-  "devDependencies": {
-    "@eslint/js": "^9.24.0",
-    "@types/chai": "^5.0.1",
-    "@types/mocha": "^10.0.10",
-    "@types/node": "^22.14.1",
-    "@types/sinon": "^17.0.4",
-    "@types/source-map-support": "^0.5.10",
-    "@types/uuid": "^10.0.0",
-    "chai": "^5.1.2",
-    "eslint": "^9.24.0",
-    "mocha": "^11.0.1",
-    "sinon": "^20.0.0",
-    "source-map-support": "^0.5.21",
-    "typescript": "^5.8.3",
-    "typescript-eslint": "^8.30.1"
-  },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.9.0",
-    "@types/yargs": "^17.0.33",
-    "uuid": "^9.0.1",
-    "yargs": "^17.7.2"
+    "@modelcontextprotocol/sdk": "^0.0.6",
+    "source-map-support": "^0.5.21",
+    "yargs": "^17.7.2",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@stylistic/eslint-plugin": "^1.6.1",
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.10.5",
+    "@types/source-map-support": "^0.5.10",
+    "@types/yargs": "^17.0.32",
+    "@typescript-eslint/eslint-plugin": "^6.16.0",
+    "@typescript-eslint/parser": "^6.16.0",
+    "chai": "^4.3.10",
+    "eslint": "^8.56.0",
+    "eslint-plugin-sonarjs": "^0.23.0",
+    "mocha": "^10.2.0",
+    "typescript": "^5.3.3"
   }
 }

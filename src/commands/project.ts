@@ -4,13 +4,14 @@ import * as os from "os";
 
 interface ProjectOptions {
   dirname: string;
+  image?: string;
 }
 
 interface CommandContext {
   workingDir: string;
 }
 
-function getProjectsFile(): string {
+function getConfigFile(): string {
   const configDir = path.join(os.homedir(), ".codespin");
   if (!fs.existsSync(configDir)) {
     fs.mkdirSync(configDir, { recursive: true });
@@ -19,32 +20,45 @@ function getProjectsFile(): string {
   return path.join(configDir, "codebox.json");
 }
 
-function getProjects(): { projects: string[] } {
-  const projectsFile = getProjectsFile();
+function getConfig(): {
+  projects: Array<{ path: string; dockerImage: string }>;
+  debug?: boolean;
+} {
+  const configFile = getConfigFile();
 
-  if (!fs.existsSync(projectsFile)) {
+  if (!fs.existsSync(configFile)) {
     return { projects: [] };
   }
 
   try {
-    const data = JSON.parse(fs.readFileSync(projectsFile, "utf8"));
-    return { projects: data.projects || [] };
+    const data = JSON.parse(fs.readFileSync(configFile, "utf8"));
+    return {
+      projects: Array.isArray(data.projects) ? data.projects : [],
+      debug: data.debug,
+    };
   } catch (error) {
-    console.error("Failed to parse projects file, creating new one");
+    console.error("Failed to parse config file, creating new one");
     return { projects: [] };
   }
 }
 
-function saveProjects(projectsData: { projects: string[], dockerImage?: string }): void {
-  const projectsFile = getProjectsFile();
-  fs.writeFileSync(projectsFile, JSON.stringify(projectsData, null, 2), "utf8");
+function saveConfig(config: {
+  projects: Array<{ path: string; dockerImage: string }>;
+  debug?: boolean;
+}): void {
+  const configFile = getConfigFile();
+  fs.writeFileSync(configFile, JSON.stringify(config, null, 2), "utf8");
 }
 
 export async function addProject(
   options: ProjectOptions,
   context: CommandContext
 ): Promise<void> {
-  const { dirname } = options;
+  const { dirname, image } = options;
+
+  if (!image) {
+    throw new Error("Docker image is required. Use --image <image_name>");
+  }
 
   // Resolve to absolute path
   const projectPath = path.resolve(context.workingDir, dirname);
@@ -58,16 +72,27 @@ export async function addProject(
     throw new Error(`Path is not a directory: ${projectPath}`);
   }
 
-  // Get existing projects
-  const projectsData = getProjects();
+  // Get existing config
+  const config = getConfig();
 
-  // Add project if not already in list
-  if (!projectsData.projects.includes(projectPath)) {
-    projectsData.projects.push(projectPath);
-    saveProjects(projectsData);
-    console.log(`Added project: ${projectPath}`);
+  // Check if project already exists
+  const existingIndex = config.projects.findIndex(
+    (p) => p.path === projectPath
+  );
+
+  if (existingIndex !== -1) {
+    // Update existing project's Docker image
+    config.projects[existingIndex].dockerImage = image;
+    saveConfig(config);
+    console.log(`Updated project: ${projectPath} with Docker image: ${image}`);
   } else {
-    console.log(`Project already in list: ${projectPath}`);
+    // Add new project
+    config.projects.push({
+      path: projectPath,
+      dockerImage: image,
+    });
+    saveConfig(config);
+    console.log(`Added project: ${projectPath} with Docker image: ${image}`);
   }
 }
 
@@ -80,27 +105,28 @@ export async function removeProject(
   // Resolve to absolute path
   const projectPath = path.resolve(context.workingDir, dirname);
 
-  // Get existing projects
-  const projectsData = getProjects();
+  // Get existing config
+  const config = getConfig();
 
-  // Remove project if found
-  const index = projectsData.projects.indexOf(projectPath);
+  // Find project index
+  const index = config.projects.findIndex((p) => p.path === projectPath);
+
   if (index !== -1) {
-    projectsData.projects.splice(index, 1);
-    saveProjects(projectsData);
+    // Remove project
+    config.projects.splice(index, 1);
+    saveConfig(config);
     console.log(`Removed project: ${projectPath}`);
   } else {
-    // Now just logging the message instead of throwing
     console.log(`Project not found in list: ${projectPath}`);
   }
 }
 
 export async function listProjects(context: CommandContext): Promise<void> {
-  const projectsData = getProjects();
+  const config = getConfig();
 
-  if (projectsData.projects.length === 0) {
+  if (config.projects.length === 0) {
     console.log(
-      "No projects are registered. Use 'codebox project add <dirname>' to add projects."
+      "No projects are registered. Use 'codebox project add <dirname> --image <image_name>' to add projects."
     );
     return;
   }
@@ -108,48 +134,12 @@ export async function listProjects(context: CommandContext): Promise<void> {
   console.log("Registered projects:");
   console.log("-------------------");
 
-  // Get system config for fallback Docker image
-  const projectsFile = getProjectsFile();
-  let systemDockerImage = null;
-  
-  if (fs.existsSync(projectsFile)) {
-    try {
-      const systemConfig = JSON.parse(fs.readFileSync(projectsFile, "utf8"));
-      systemDockerImage = systemConfig.dockerImage || null;
-    } catch {}
-  }
+  config.projects.forEach((project, index) => {
+    const exists = fs.existsSync(project.path);
 
-  projectsData.projects.forEach((projectPath, index) => {
-    // Check if the project has a codebox configuration
-    const configFile = path.join(projectPath, ".codespin", "codebox.json");
-    const exists = fs.existsSync(projectPath);
-    const hasConfig = exists && fs.existsSync(configFile);
-
-    // Get the Docker image if configuration exists
-    let dockerImage = "";
-    let fromSystem = false;
-    
-    if (hasConfig) {
-      try {
-        const config = JSON.parse(fs.readFileSync(configFile, "utf8"));
-        dockerImage = config.dockerImage || "";
-      } catch {
-        dockerImage = "Invalid configuration";
-      }
-    }
-    
-    // If no project-specific image but there's a system image, use that
-    if (!dockerImage && systemDockerImage) {
-      dockerImage = systemDockerImage;
-      fromSystem = true;
-    }
-
-    console.log(`${index + 1}. ${projectPath}`);
+    console.log(`${index + 1}. ${project.path}`);
     console.log(`   Status: ${exists ? "exists" : "missing"}`);
-    console.log(`   Configured: ${hasConfig || systemDockerImage ? "yes" : "no"}`);
-    if (dockerImage) {
-      console.log(`   Docker Image: ${dockerImage}${fromSystem ? " (from system config)" : ""}`);
-    }
+    console.log(`   Docker Image: ${project.dockerImage}`);
     console.log();
   });
 }

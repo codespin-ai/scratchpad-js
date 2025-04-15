@@ -29,8 +29,7 @@ describe("Batch Files MCP Tools", () => {
 
     // Register project in system config
     createTestConfig(testDir, {
-      dockerImage: "node:18",
-      projects: [projectPath],
+      projects: [{ path: projectPath, dockerImage: "node:18" }],
     });
 
     // Set up test tool registration
