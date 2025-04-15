@@ -76,8 +76,8 @@ export function logMcpCall({
   endTime
 }: {
   method: string;
-  payload: any;
-  response: any;
+  payload: unknown;
+  response: unknown;
   startTime: Date;
   endTime: Date;
 }) {
@@ -111,5 +111,5 @@ export function logMcpCall({
 
 // Used for testing - allows for mocking the home directory
 export function _setHomeDir(fn: () => string) {
-  (getHomeDir as any) = fn;
+  (getHomeDir as unknown) = fn;
 }

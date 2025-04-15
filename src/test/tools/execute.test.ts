@@ -14,7 +14,7 @@ function isDockerAvailable(): boolean {
   try {
     const dockerCheck = spawnSync("docker", ["--version"]);
     return !(dockerCheck.error || dockerCheck.status !== 0);
-  } catch (error) {
+  } catch (_) {
     return false;
   }
 }
@@ -57,7 +57,7 @@ describe("Execute Commands", function() {
   
   let testDir: string;
   let projectPath: string;
-  let originalHomeDir: any;
+  let originalHomeDir: unknown;
   let toolRegistration: TestToolRegistration;
   const dockerImage = "alpine:latest";
 
@@ -85,17 +85,14 @@ describe("Execute Commands", function() {
     fs.mkdirSync(projectPath, { recursive: true });
     
     // Create all test files in batch
-    const files = [
+    for (const file of [
       { path: path.join(projectPath, "test.txt"), content: "Hello, world!" },
       { path: path.join(projectPath, "test2.txt"), content: "Another test file" },
       { path: path.join(projectPath, "script.sh"), content: "#!/bin/sh\necho \"Running script\"\necho \"Arguments: $@\"\necho \"Success!\"\n" },
       { path: path.join(projectPath, "error.sh"), content: "#!/bin/sh\necho \"Error message\" >&2\nexit 1" }
-    ];
-    
-    // Create all files at once
-    files.forEach(file => {
+    ]) {
       fs.writeFileSync(file.path, file.content);
-    });
+    }
     
     // Set permissions for script files
     fs.chmodSync(path.join(projectPath, "script.sh"), 0o755);
@@ -113,7 +110,7 @@ describe("Execute Commands", function() {
     toolRegistration.registerTool(
       "execute_command", 
       async (params: { projectDir: string; command: string }) => {
-        const { projectDir, command } = params;
+        const { projectDir, command } = params as { projectDir: string; command: string };
         
         // Validate project directory
         const normalizedProjectDir = path.normalize(projectDir);
@@ -147,7 +144,11 @@ describe("Execute Commands", function() {
     toolRegistration.registerTool(
       "execute_batch_commands", 
       async (params: { projectDir: string; commands: string[]; stopOnError?: boolean }) => {
-        const { projectDir, commands, stopOnError = false } = params;
+        const { projectDir, commands, stopOnError = false } = params as { 
+          projectDir: string; 
+          commands: string[]; 
+          stopOnError?: boolean 
+        };
         
         // Validate project directory
         const normalizedProjectDir = path.normalize(projectDir);
@@ -163,8 +164,7 @@ describe("Execute Commands", function() {
         let hasError = false;
         
         // Execute each command in sequence
-        for (let i = 0; i < commands.length; i++) {
-          const command = commands[i];
+        for (const command of commands) {
           const result = await executeInDocker(projectDir, command, dockerImage);
           
           // Format output for this command
@@ -208,7 +208,7 @@ describe("Execute Commands", function() {
   afterEach(() => {
     // Restore original home directory
     if (originalHomeDir) {
-      _setHomeDir(originalHomeDir);
+      _setHomeDir(originalHomeDir as () => string);
     }
     
     // Clean up test environment
@@ -222,7 +222,7 @@ describe("Execute Commands", function() {
       const response = await toolRegistration.callTool("execute_command", {
         projectDir: projectPath,
         command: "cat test.txt"
-      });
+      }) as { content: { text: string }[]; metadata: { status: number } };
       
       expect(response.content[0].text).to.equal("Hello, world!");
       expect(response.metadata.status).to.equal(0);
@@ -232,7 +232,7 @@ describe("Execute Commands", function() {
       const response = await toolRegistration.callTool("execute_command", {
         projectDir: projectPath,
         command: "cat nonexistent.txt"
-      });
+      }) as { content: { text: string }[]; metadata: { status: number } };
       
       expect(response.content[0].text).to.include("STDERR:");
       expect(response.content[0].text).to.include("No such file or directory");
@@ -243,7 +243,7 @@ describe("Execute Commands", function() {
       const response = await toolRegistration.callTool("execute_command", {
         projectDir: projectPath,
         command: "./script.sh arg1 arg2"
-      });
+      }) as { content: { text: string }[]; metadata: { status: number } };
       
       expect(response.content[0].text).to.include("Running script");
       expect(response.content[0].text).to.include("Arguments: arg1 arg2");
@@ -260,7 +260,7 @@ describe("Execute Commands", function() {
           "cat test.txt",
           "cat test2.txt"
         ]
-      });
+      }) as { content: { text: string }[]; metadata: { hasError: boolean; results: unknown[] } };
       
       expect(response.content[0].text).to.include("Hello, world!");
       expect(response.content[0].text).to.include("Another test file");
@@ -274,7 +274,7 @@ describe("Execute Commands", function() {
           "cat nonexistent.txt",
           "cat test.txt"
         ]
-      });
+      }) as { content: { text: string }[]; metadata: { hasError: boolean; results: unknown[] } };
       
       expect(response.content[0].text).to.include("No such file or directory");
       expect(response.content[0].text).to.include("Hello, world!");
@@ -290,7 +290,7 @@ describe("Execute Commands", function() {
           "cat test.txt"
         ],
         stopOnError: true
-      });
+      }) as { content: { text: string }[]; metadata: { hasError: boolean; results: unknown[] } };
       
       expect(response.content[0].text).to.include("No such file or directory");
       expect(response.content[0].text).to.not.include("Hello, world!");
@@ -305,7 +305,7 @@ describe("Execute Commands", function() {
           "VAR=test",
           "echo $VAR"
         ]
-      });
+      }) as { content: { text: string }[]; metadata: { hasError: boolean } };
       
       expect(response.content[0].text).to.include("test");
       expect(response.metadata.hasError).to.be.false;

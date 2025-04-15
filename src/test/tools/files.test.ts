@@ -8,7 +8,7 @@ import { createTestEnvironment, cleanupTestEnvironment, createTestConfig } from 
 describe("File MCP Tools", () => {
   let testDir: string;
   let projectPath: string;
-  let originalHomeDir: any;
+  let originalHomeDir: unknown;
   let toolRegistration: TestToolRegistration;
 
   beforeEach(() => {
@@ -89,7 +89,7 @@ describe("File MCP Tools", () => {
 
   afterEach(() => {
     // Restore original home directory function
-    _setHomeDir(originalHomeDir);
+    _setHomeDir(originalHomeDir as () => string);
     
     // Clean up test environment
     cleanupTestEnvironment(testDir);
@@ -106,11 +106,11 @@ describe("File MCP Tools", () => {
         filePath,
         content,
         mode: "overwrite"
-      });
+      }) as { isError: boolean; content: { text: string }[] };
       
       // Verify response
-      expect(response).to.have.property('isError').to.be.false;
-      expect(response).to.have.property('content');
+      expect(response.isError).to.be.false;
+      expect(response.content).to.be.an('array');
       expect(response.content[0].text).to.include('Successfully wrote file');
       
       // Verify file content
@@ -134,11 +134,11 @@ describe("File MCP Tools", () => {
         filePath,
         content: appendContent,
         mode: "append"
-      });
+      }) as { isError: boolean; content: { text: string }[] };
       
       // Verify response
-      expect(response).to.have.property('isError').to.be.false;
-      expect(response).to.have.property('content');
+      expect(response.isError).to.be.false;
+      expect(response.content).to.be.an('array');
       expect(response.content[0].text).to.include('Successfully appended to file');
       
       // Verify file content was appended
@@ -155,10 +155,10 @@ describe("File MCP Tools", () => {
         filePath,
         content,
         mode: "overwrite"
-      });
+      }) as { isError: boolean; content: { text: string }[] };
       
       // Verify response
-      expect(response).to.have.property('isError').to.be.false;
+      expect(response.isError).to.be.false;
       
       // Verify file exists with correct content
       const fullPath = path.join(projectPath, filePath);
@@ -176,10 +176,10 @@ describe("File MCP Tools", () => {
         filePath,
         content,
         mode: "overwrite"
-      });
+      }) as { isError: boolean; content: { text: string }[] };
       
       // Verify error response
-      expect(response).to.have.property('isError').to.be.true;
+      expect(response.isError).to.be.true;
       expect(response.content[0].text).to.include('Invalid file path');
       
       // Verify file was not created

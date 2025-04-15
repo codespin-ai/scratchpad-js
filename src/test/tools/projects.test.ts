@@ -7,7 +7,7 @@ import { createTestEnvironment, cleanupTestEnvironment, createTestConfig } from 
 
 describe("Project MCP Tools", () => {
   let testDir: string;
-  let originalHomeDir: any;
+  let originalHomeDir: unknown;
   let toolRegistration: TestToolRegistration;
 
   beforeEach(() => {
@@ -125,7 +125,7 @@ describe("Project MCP Tools", () => {
 
   afterEach(() => {
     // Restore original home directory function
-    _setHomeDir(originalHomeDir);
+    _setHomeDir(originalHomeDir as () => string);
     
     // Clean up test environment
     cleanupTestEnvironment(testDir);
@@ -137,11 +137,13 @@ describe("Project MCP Tools", () => {
       createTestConfig(testDir, { projects: [] });
       
       // Call the list_projects tool
-      const response = await toolRegistration.callTool("list_projects", {});
+      const response = await toolRegistration.callTool("list_projects", {}) as {
+        isError: boolean;
+        content: { text: string }[];
+      };
       
       // Verify response
-      expect(response).to.have.property('isError').to.be.false;
-      expect(response).to.have.property('content');
+      expect(response.isError).to.be.false;
       expect(response.content).to.be.an('array').with.lengthOf(1);
       expect(response.content[0].text).to.include('No projects registered');
     });
@@ -157,11 +159,13 @@ describe("Project MCP Tools", () => {
       });
       
       // Call the list_projects tool
-      const response = await toolRegistration.callTool("list_projects", {});
+      const response = await toolRegistration.callTool("list_projects", {}) as {
+        isError: boolean;
+        content: { text: string }[];
+      };
       
       // Verify response
-      expect(response).to.have.property('isError').to.be.false;
-      expect(response).to.have.property('content');
+      expect(response.isError).to.be.false;
       expect(response.content).to.be.an('array').with.lengthOf(1);
       expect(response.content[0].text).to.include(projectPath);
       expect(response.content[0].text).to.include('node:18');
@@ -177,11 +181,11 @@ describe("Project MCP Tools", () => {
       const invalidPath = path.join(testDir, "non-existent");
       const response = await toolRegistration.callTool("get_project_config", 
         { projectDir: invalidPath }
-      );
+      ) as { isError: boolean; content: { text: string }[] };
       
       // Verify error response
-      expect(response).to.have.property('isError').to.be.true;
-      expect(response).to.have.property('content');
+      expect(response.isError).to.be.true;
+      expect(response.content).to.be.an('array');
       expect(response.content[0].text).to.include('Invalid or unregistered project');
     });
 
@@ -198,11 +202,11 @@ describe("Project MCP Tools", () => {
       // Call get_project_config
       const response = await toolRegistration.callTool("get_project_config", 
         { projectDir: projectPath }
-      );
+      ) as { isError: boolean; content: { text: string }[] };
       
       // Verify response
-      expect(response).to.have.property('isError').to.be.false;
-      expect(response).to.have.property('content');
+      expect(response.isError).to.be.false;
+      expect(response.content).to.be.an('array');
       expect(response.content[0].text).to.include('node:latest');
     });
   });
