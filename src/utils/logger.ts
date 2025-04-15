@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { v4 as uuidv4 } from 'uuid';
+import { SystemConfig } from '../types/config.js';
 
 // Get the home directory - this will be mocked in tests
 function getHomeDir(): string {
@@ -58,7 +59,7 @@ export function isDebugEnabled(): boolean {
   
   try {
     const configContent = fs.readFileSync(configPath, 'utf8');
-    const config = JSON.parse(configContent);
+    const config = JSON.parse(configContent) as SystemConfig;
     return !!config.debug;
   } catch (error) {
     console.error('Failed to parse config file:', error);

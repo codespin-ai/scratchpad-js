@@ -4,6 +4,7 @@ import * as fs from "fs";
 import * as os from "os";
 import { exec } from "child_process";
 import { promisify } from "util";
+import { ProjectConfig, SystemConfig } from "../types/config.js";
 
 const execAsync = promisify(exec);
 
@@ -19,7 +20,7 @@ export function getProjectsFile(): string {
   return path.join(os.homedir(), ".codespin", "codebox.json");
 }
 
-export function getProjects(): Array<{path: string, dockerImage: string}> {
+export function getProjects(): ProjectConfig[] {
   const projectsFile = getProjectsFile();
 
   if (!fs.existsSync(projectsFile)) {
@@ -75,19 +76,22 @@ export function validateFilePath(
   return fullPath.startsWith(resolvedProjectDir);
 }
 
-export function getSystemConfig(): { debug?: boolean } | null {
+export function getSystemConfig(): SystemConfig | null {
   const configFile = getProjectsFile();
 
   if (!fs.existsSync(configFile)) {
-    return null;
+    return { projects: [] };
   }
 
   try {
     const config = JSON.parse(fs.readFileSync(configFile, "utf8"));
-    return { debug: config.debug };
+    return { 
+      projects: Array.isArray(config.projects) ? config.projects : [],
+      debug: config.debug 
+    };
   } catch (error) {
     console.error("Failed to parse system config file");
-    return null;
+    return { projects: [] };
   }
 }
 

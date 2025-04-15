@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+import { ProjectConfig, SystemConfig } from "../types/config.js";
 
 interface ProjectOptions {
   dirname: string;
@@ -20,10 +21,7 @@ function getConfigFile(): string {
   return path.join(configDir, "codebox.json");
 }
 
-function getConfig(): {
-  projects: Array<{ path: string; dockerImage: string }>;
-  debug?: boolean;
-} {
+function getConfig(): SystemConfig {
   const configFile = getConfigFile();
 
   if (!fs.existsSync(configFile)) {
@@ -42,10 +40,7 @@ function getConfig(): {
   }
 }
 
-function saveConfig(config: {
-  projects: Array<{ path: string; dockerImage: string }>;
-  debug?: boolean;
-}): void {
+function saveConfig(config: SystemConfig): void {
   const configFile = getConfigFile();
   fs.writeFileSync(configFile, JSON.stringify(config, null, 2), "utf8");
 }

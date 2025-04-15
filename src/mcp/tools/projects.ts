@@ -4,6 +4,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as zod from "zod";
 import { getProjects, getSystemConfig } from "../utils.js";
+import { ProjectConfig } from "../../types/config.js";
 
 // Define the input schema type
 const ProjectConfigInput = {
@@ -29,7 +30,7 @@ export function registerProjectTools(server: McpServer): void {
       }
 
       // Build detailed project information
-      const projectDetails = projects.map((project) => {
+      const projectDetails = projects.map((project: ProjectConfig) => {
         const exists = fs.existsSync(project.path);
         
         return {
