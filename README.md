@@ -44,6 +44,7 @@ Codebox uses a hierarchical configuration system:
 2. **System-wide configuration**: Located at `$HOME/.codespin/codebox.json`
 
 When a Docker image is needed for a project, Codebox checks:
+
 - First, the project-specific configuration
 - If not found or no `dockerImage` defined, falls back to the system-wide configuration
 
@@ -61,6 +62,7 @@ You can enable debug logging by adding a `debug` flag to your system-wide config
 ```
 
 When debug logging is enabled:
+
 - All MCP method calls will be logged to `$HOME/.codespin/logs/*.log` files (organized by date)
 - Request payloads and responses will be saved to `$HOME/.codespin/logs/requests/` directory
 - Each log entry includes method name, timestamp, processing time, and a unique request ID
@@ -143,14 +145,11 @@ codebox start
 The batch command tool allows executing multiple commands in sequence with a single LLM call, reducing API costs and improving efficiency. All commands run in the same Docker container session, preserving environment state between commands.
 
 Example usage:
+
 ```json
 {
   "projectDir": "/path/to/project",
-  "commands": [
-    "npm install",
-    "npm test",
-    "npm run build"
-  ],
+  "commands": ["npm install", "npm test", "npm run build"],
   "stopOnError": true
 }
 ```
@@ -185,6 +184,7 @@ Example usage:
 The batch file tool allows writing multiple files in a single LLM call, reducing API costs and improving efficiency. This is particularly useful when you need to create or modify multiple tiny/small files at once.
 
 Example usage:
+
 ```json
 {
   "projectDir": "/path/to/project",
@@ -207,6 +207,7 @@ Example usage:
 ### list_projects
 
 Lists registered projects with status. For each project, shows:
+
 - Path to the project
 - Whether the project exists
 - Configuration status
@@ -224,12 +225,7 @@ Lists registered projects with status. For each project, shows:
 ## Agent Prompt
 
 ```
-Codebox is Model Context Protocol (MCP) server for LLM Agents to make code changes to a project:
-- Isolated command execution in Docker containers
-- Safe file operations for code modifications
-- Project-scoped access to prevent unauthorized changes
-
-Use this for:
+These tools will help you:
 - Reading and modifying source code
 - Running tests or build commands
 - Executing project-specific development tools
@@ -237,49 +233,65 @@ Use this for:
 
 Available tools:
 - list_projects: See available projects
-- execute_command: Run commands in project's Docker container
+- execute_command: Run commands in a Docker container.
 - execute_batch_commands: Run multiple commands in sequence with a single call
 - write_file: Create or modify files
 - write_batch_files: Create or modify multiple files in a single call
 - get_project_config: Get project details
 
 TOKEN USAGE WARNING:
-Large directory listings or file contents can consume significant tokens. To avoid this:
-1. Navigate directories incrementally (avoid recursive listings)
+1. Navigate directories incrementally (avoid recursive listings) unless you know that there aren't many entries
 2. Skip dependency/build directories (node_modules, dist, target, etc)
-3. Preview files before full reads
-4. Request specific files rather than entire directories
-5. Check file sizes before requesting full content (use 'wc -c <filename>' or 'ls -l')
-6. Use execute_batch_commands for predictable command sequences
-7. Use write_batch_files when creating multiple small files at once
+3. Request only the files you need
+4. If you're requesting files which can potentially be large, check file sizes before requesting full content (use 'wc -c <filename>' or 'ls -l')
+
+Minimize calls to the LLM:
+1. Use execute_batch_commands for predictable command sequences. For example "cat a.txt", "cat b.txt". They're executed sequentially, and results returned.
+2. Use write_batch_files when creating multiple small files at once. But if they're large files (>5KB), use separate calls.
 
 Efficient workflow example:
+
 GOOD:
+> // Start with this. Get all projects.
 > list_projects
+
+// Find what's in the src directory.
 > execute_command {projectDir: "/path", command: "ls src"}
-> execute_command {projectDir: "/path", command: "ls -l src/config.ts"} # Check file size
-> execute_command {projectDir: "/path", command: "head -n 20 src/config.ts"}
+
+// Find a specific file.
+> execute_command {projectDir: "/path", command: "cat src/config.ts"}
+
+// Write a specific file.
 > write_file {projectDir: "/path", filePath: "src/config.ts", content: "..."}
+
+> // Run multiple commands at once.
+> execute_batch_commands {projectDir: "/path", commands: ["cat a.txt", "cat b.txt"]}
+
+> // Another example of batching commands
 > execute_batch_commands {projectDir: "/path", commands: ["npm install", "npm test"]}
+
+> // If files are small, write them out at once
 > write_batch_files {projectDir: "/path", files: [{filePath: "file1.txt", content: "..."}, {filePath: "file2.txt", content: "..."}]}
 
 BAD (wastes tokens):
+> // Gets a big list of files. What if there's a huge node_modules in it?
 > execute_command {projectDir: "/path", command: "find . -type f"} // Lists everything
+
+> // Never go into node_modules, unless the user specifically asks for it.
 > execute_command {projectDir: "/path", command: "cat node_modules/package/README.md"}
-> execute_command {projectDir: "/path", command: "cat src/large-file.ts"} // Without checking size first
-> write_file {projectDir: "/path", filePath: "file1.txt", content: "..."} // Multiple separate write_file calls
-> write_file {projectDir: "/path", filePath: "file2.txt", content: "..."} // for small files
+
+> // Multiple separate write_file calls for small files
+> write_file {projectDir: "/path", filePath: "file1.txt", content: "..."}
+> write_file {projectDir: "/path", filePath: "file2.txt", content: "..."}
 
 Remember:
 - Work incrementally through directories
 - Avoid large file reads unless necessary, ask for permission as needed
-- Check file sizes before requesting full content (files >100KB can waste many tokens)
 - Commands execute in an isolated Docker container
-- You must use write_file to write file content, instead of something like echoing to a file.
-- If the user asks for the output of a command, you may print the output of execute_command verbatim in a markdown codeblock.
-- Of course, if you know the sizes of files you're requesting (via a previous 'ls' for example), you don't need to ask every time.
+- You must always use write_file to write file content, instead of something like echoing to a file.
+- If the user asks for the output of a command, you must print the output of execute_command verbatim in a markdown codeblock.
 - Use batch commands when you know a fixed sequence of commands needs to be executed. This saves API costs and time.
-- Use write_batch_files when writing multiple small files at once to reduce API calls.
+- Use write_batch_files to write multiple small files because this will reduce  API calls, which happen after every tool use.
 ```
 
 ## License

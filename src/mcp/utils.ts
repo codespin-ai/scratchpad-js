@@ -116,8 +116,8 @@ export async function executeInContainer(
   dockerImage: string
 ): Promise<ExecuteResult> {
   const dockerCommand = `docker run -i --rm \
-  -v "${projectDir}:/home/project" \
-  --workdir="/home/project" \
+  -v "${projectDir}:${projectDir}" \
+  --workdir="${projectDir}" \
   --user=${uid}:${gid} \
   ${dockerImage} /bin/sh -c "${command}"`;
 
