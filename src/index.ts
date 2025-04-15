@@ -41,7 +41,7 @@ export async function main() {
             },
             async (argv) => {
               await addProject(
-                { dirname: argv.dirname as string, image: argv.image as string },
+                { dirname: argv.dirname, image: argv.image },
                 { workingDir: process.cwd() }
               );
             }
@@ -58,7 +58,7 @@ export async function main() {
             },
             async (argv) => {
               await removeProject(
-                { dirname: argv.dirname as string },
+                { dirname: argv.dirname },
                 { workingDir: process.cwd() }
               );
             }
@@ -72,7 +72,9 @@ export async function main() {
             "You must specify a project command (add/remove/list)"
           );
       },
-      () => { /* empty function required by yargs */ }
+      () => {
+        /* empty function required by yargs */
+      }
     )
     .command("version", "Display the current version", {}, async () => {
       writeToConsole("Codebox v1.0.0");
