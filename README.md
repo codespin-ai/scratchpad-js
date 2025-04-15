@@ -292,6 +292,8 @@ Remember:
 - If the user asks for the output of a command, you must print the output of execute_command verbatim in a markdown codeblock.
 - Use batch commands when you know a fixed sequence of commands needs to be executed. This saves API costs and time.
 - Use write_batch_files to write multiple small files because this will reduce  API calls, which happen after every tool use.
+
+Finally, if the project has an ./agents/agent.md file, you must follow the instructions in it as well.
 ```
 
 ## License
