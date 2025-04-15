@@ -5,11 +5,24 @@ import { start } from "./commands/start.js";
 import { addProject, listProjects, removeProject } from "./commands/project.js";
 import { setInvokeMode } from "./utils/invokeMode.js";
 import process from "node:process";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 setInvokeMode("cli");
 
+// Function to get the version from package.json
+export function getVersion() {
+  // Get the directory name of the current module
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  // Read package.json from the root directory
+  const packagePath = path.resolve(__dirname, "../package.json");
+  const packageJson = JSON.parse(fs.readFileSync(packagePath, "utf8"));
+  return `Codebox v${packageJson.version}`;
+}
+
 export async function main() {
-  yargs(process.argv.slice(2))
+  await yargs(process.argv.slice(2))
     .command(
       "start",
       "Start the MCP server for executing commands in containers",
@@ -40,7 +53,10 @@ export async function main() {
                 });
             },
             async (argv) => {
-              await addProject(argv as any, { workingDir: process.cwd() });
+              await addProject(
+                { dirname: argv.dirname, image: argv.image },
+                { workingDir: process.cwd() }
+              );
             }
           )
           .command(
@@ -54,22 +70,27 @@ export async function main() {
               });
             },
             async (argv) => {
-              await removeProject(argv as any, { workingDir: process.cwd() });
+              await removeProject(
+                { dirname: argv.dirname },
+                { workingDir: process.cwd() }
+              );
             }
           )
           .demandCommand(1, "You must specify a project command (add/remove)")
           .command("list", "List all registered projects", {}, async () => {
-            await listProjects({ workingDir: process.cwd() });
+            await listProjects();
           })
           .demandCommand(
             1,
             "You must specify a project command (add/remove/list)"
           );
       },
-      () => {}
+      () => {
+        /* empty function required by yargs */
+      }
     )
     .command("version", "Display the current version", {}, async () => {
-      writeToConsole("Codebox v1.0.0");
+      writeToConsole(getVersion());
     })
     .demandCommand(1, "You need to specify a command")
     .showHelpOnFail(true)

@@ -1,4 +1,4 @@
-import * as os from 'os';
+import * as os from "os";
 
 // Original homedir function
 const originalHomedir = os.homedir;
@@ -8,7 +8,7 @@ let mockHome: string | null = null;
 
 /**
  * Set a custom home directory for testing
- * 
+ *
  * @param dir Directory to use as home
  */
 export function setMockHomeDir(dir: string): void {

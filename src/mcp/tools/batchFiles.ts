@@ -13,18 +13,20 @@ export function registerBatchFileTools(server: McpServer): void {
       projectDir: zod
         .string()
         .describe("The absolute path to the project directory"),
-      files: zod.array(
-        zod.object({
-          filePath: zod
-            .string()
-            .describe("Relative path to the file from project root"),
-          content: zod.string().describe("Content to write to the file"),
-          mode: zod
-            .enum(["overwrite", "append"])
-            .default("overwrite")
-            .describe("Write mode - whether to overwrite or append"),
-        })
-      ).describe("Array of file operations to perform"),
+      files: zod
+        .array(
+          zod.object({
+            filePath: zod
+              .string()
+              .describe("Relative path to the file from project root"),
+            content: zod.string().describe("Content to write to the file"),
+            mode: zod
+              .enum(["overwrite", "append"])
+              .default("overwrite")
+              .describe("Write mode - whether to overwrite or append"),
+          })
+        )
+        .describe("Array of file operations to perform"),
       stopOnError: zod
         .boolean()
         .optional()
@@ -47,9 +49,9 @@ export function registerBatchFileTools(server: McpServer): void {
       const results = [];
       let hasError = false;
 
-      for (let i = 0; i < files.length; i++) {
-        const { filePath, content, mode = "overwrite" } = files[i];
-        
+      for (const fileOp of files) {
+        const { filePath, content, mode = "overwrite" } = fileOp;
+
         try {
           if (!validateFilePath(projectDir, filePath)) {
             throw new Error(`Invalid file path: ${filePath}`);
@@ -70,7 +72,9 @@ export function registerBatchFileTools(server: McpServer): void {
           results.push({
             filePath,
             success: true,
-            message: `Successfully ${mode === "append" ? "appended to" : "wrote"} file`,
+            message: `Successfully ${
+              mode === "append" ? "appended to" : "wrote"
+            } file`,
           });
         } catch (error) {
           hasError = true;
@@ -79,7 +83,7 @@ export function registerBatchFileTools(server: McpServer): void {
             success: false,
             message: error instanceof Error ? error.message : "Unknown error",
           });
-          
+
           // Stop if stopOnError is true
           if (stopOnError) {
             break;
@@ -88,12 +92,16 @@ export function registerBatchFileTools(server: McpServer): void {
       }
 
       // Format the results
-      const formattedResults = results.map(result => {
-        return `File: ${result.filePath}\n` +
-               `Status: ${result.success ? 'Success' : 'Failed'}\n` +
-               `Message: ${result.message}\n` +
-               "----------------------------------------\n";
-      }).join("\n");
+      const formattedResults = results
+        .map((result) => {
+          return (
+            `File: ${result.filePath}\n` +
+            `Status: ${result.success ? "Success" : "Failed"}\n` +
+            `Message: ${result.message}\n` +
+            "----------------------------------------\n"
+          );
+        })
+        .join("\n");
 
       return {
         isError: hasError && stopOnError,
