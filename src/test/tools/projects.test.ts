@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import * as fs from "fs";
 import * as path from "path";
-import { TestToolRegistration } from "../mcp-test-util.js";
+import { TestToolRegistration } from "../mcpTestUtil.js";
 import { _setHomeDir } from "../../utils/logger.js";
 import {
   createTestEnvironment,

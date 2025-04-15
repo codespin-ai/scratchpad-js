@@ -8,7 +8,7 @@ import {
   cleanupTestEnvironment,
   createTestConfig,
 } from "./setup.js";
-import { TestToolRegistration } from "./mcp-test-util.js";
+import { TestToolRegistration } from "./mcpTestUtil.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 describe("Logging Wrapper", () => {
