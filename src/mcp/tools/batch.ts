@@ -12,7 +12,9 @@ export function registerBatchTools(server: McpServer): void {
     "execute_batch_commands",
     "Execute multiple commands in sequence within a Docker container for a specific project",
     {
-      commands: zod.array(zod.string()).describe("Array of commands to execute in sequence"),
+      commands: zod
+        .array(zod.string())
+        .describe("Array of commands to execute in sequence"),
       projectDir: zod
         .string()
         .describe("The absolute path to the project directory"),
@@ -59,7 +61,7 @@ export function registerBatchTools(server: McpServer): void {
             dockerImage
           );
           const output = stdout + (stderr ? `\nSTDERR:\n${stderr}` : "");
-          
+
           // Add the command and its output to results
           results.push({
             command,
@@ -73,7 +75,7 @@ export function registerBatchTools(server: McpServer): void {
             output: error instanceof Error ? error.message : "Unknown error",
             success: false,
           });
-          
+
           // Stop if stopOnError is true
           if (stopOnError) {
             break;
@@ -82,12 +84,16 @@ export function registerBatchTools(server: McpServer): void {
       }
 
       // Format the results
-      const formattedResults = results.map(result => {
-        return `Command: ${result.command}\n` +
-               `Status: ${result.success ? 'Success' : 'Failed'}\n` +
-               `Output:\n${result.output}\n` +
-               "----------------------------------------\n";
-      }).join("\n");
+      const formattedResults = results
+        .map((result) => {
+          return (
+            `Command: ${result.command}\n` +
+            `Status: ${result.success ? "Success" : "Failed"}\n` +
+            `Output:\n${result.output}\n` +
+            "----------------------------------------\n"
+          );
+        })
+        .join("\n");
 
       return {
         isError: hasError && stopOnError,

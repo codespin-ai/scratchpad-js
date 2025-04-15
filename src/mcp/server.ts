@@ -26,7 +26,9 @@ export async function createServer(): Promise<McpServer> {
   );
 
   // If debug mode is enabled, add logging
-  const serverWithLogging = isDebugEnabled() ? addLoggingToServer(server) : server;
+  const serverWithLogging = isDebugEnabled()
+    ? addLoggingToServer(server)
+    : server;
 
   // Register all tools
   registerFileTools(serverWithLogging);

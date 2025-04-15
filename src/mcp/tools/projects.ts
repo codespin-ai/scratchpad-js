@@ -32,7 +32,7 @@ export function registerProjectTools(server: McpServer): void {
       // Build detailed project information
       const projectDetails = projects.map((project: ProjectConfig) => {
         const exists = fs.existsSync(project.path);
-        
+
         return {
           path: project.path,
           status: exists ? "exists" : "missing",
@@ -80,12 +80,12 @@ export function registerProjectTools(server: McpServer): void {
       try {
         const projects = getProjects();
         const resolvedPath = path.resolve(projectDir);
-        
+
         // Find matching project configuration
-        const project = projects.find(p => {
+        const project = projects.find((p) => {
           const normalizedProjectPath = p.path.replace(/\/+$/, "");
           const normalizedInputPath = resolvedPath.replace(/\/+$/, "");
-          
+
           return (
             normalizedInputPath === normalizedProjectPath ||
             normalizedInputPath.startsWith(normalizedProjectPath + path.sep)
