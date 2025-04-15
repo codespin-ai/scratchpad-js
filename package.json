@@ -8,8 +8,10 @@
     "clean": "rm -rf ./dist",
     "build": "npm run clean && npx tsc",
     "start": "node dist/index.js",
-    "test": "npm run build && npx mocha \"dist/test/**/*.test.js\"",
-    "test:grep": "npm run build && npx mocha \"dist/test/**/*.test.js\" --grep"
+    "test": "npm run build && npx mocha \"dist/test/**/*.test.js\" \"dist/test/*.test.js\" \"dist/src/test/**/*.test.js\" \"dist/src/test/*.test.js\"",
+    "test:init": "npm run build && npx mocha \"dist/test/init*.test.js\"",
+    "test:execute": "npm run build && npx mocha \"dist/src/test/tools/execute.test.js\"",
+    "test:grep": "npm run build && npx mocha \"dist/test/**/*.test.js\" \"dist/test/*.test.js\" \"dist/src/test/**/*.test.js\" \"dist/src/test/*.test.js\" --grep"
   },
   "bin": {
     "codebox": "dist/index.js"
@@ -28,10 +30,12 @@
     "@types/chai": "^5.0.1",
     "@types/mocha": "^10.0.10",
     "@types/node": "^22.14.1",
+    "@types/sinon": "^17.0.4",
     "@types/source-map-support": "^0.5.10",
     "@types/uuid": "^10.0.0",
     "chai": "^5.1.2",
     "mocha": "^11.0.1",
+    "sinon": "^20.0.0",
     "source-map-support": "^0.5.21",
     "typescript": "^5.8.3"
   },

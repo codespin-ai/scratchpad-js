@@ -46,3 +46,28 @@ export function mockValidateFilePath(projectDir: string, filePath: string): bool
   // Ensure the resulting path is still within the project directory
   return fullPath.startsWith(resolvedProjectDir);
 }
+
+/**
+ * A test tool registration class for simulating the MCP tooling environment
+ */
+export class TestToolRegistration {
+  private tools: Map<string, Function> = new Map();
+
+  /**
+   * Register a tool for testing
+   */
+  registerTool(name: string, handler: Function): void {
+    this.tools.set(name, handler);
+  }
+
+  /**
+   * Call a registered tool with parameters
+   */
+  async callTool(name: string, params: any): Promise<any> {
+    const handler = this.tools.get(name);
+    if (!handler) {
+      throw new Error(`Tool not found: ${name}`);
+    }
+    return await handler(params);
+  }
+}
