@@ -20,7 +20,7 @@ function isDockerAvailable(): boolean {
 }
 
 // Execute command implementation for testing with real Docker containers
-async function executeInDocker(projectDir: string, command: string, dockerImage: string = "alpine:latest"): Promise<{
+async function executeInDocker(projectDir: string, command: string, dockerImage = "alpine:latest"): Promise<{
   stdout: string;
   stderr: string;
   status: number | null;

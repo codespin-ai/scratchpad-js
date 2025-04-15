@@ -51,7 +51,7 @@ export function mockValidateFilePath(projectDir: string, filePath: string): bool
  * A test tool registration class for simulating the MCP tooling environment
  */
 export class TestToolRegistration {
-  private tools: Map<string, Function> = new Map();
+  private tools = new Map<string, Function>();
 
   /**
    * Register a tool for testing

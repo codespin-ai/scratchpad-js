@@ -299,3 +299,21 @@ Finally, if the project has an ./agents/agent.md file, you must follow the instr
 ## License
 
 MIT
+
+## Development
+
+### Linting
+
+The project uses ESLint with TypeScript support for code quality and consistency. We've configured ESLint with the recommended, strict, and stylistic rule sets for comprehensive linting.
+
+To lint the project:
+
+```bash
+# Run ESLint
+npm run lint
+
+# Run ESLint with automatic fixes
+npm run lint:fix
+```
+
+The ESLint configuration is in `eslint.config.mjs` using ESLint's new flat config format.
