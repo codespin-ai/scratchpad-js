@@ -165,7 +165,7 @@ describe("Batch Files MCP Tools", () => {
       });
 
       // Verify response
-      expect(response).to.have.property("isError").to.be.false;
+      expect(response).to.have.property("isError").to.equal(false);
       expect(response).to.have.property("content");
       expect(
         (response as { content: { text: string }[] }).content[0].text
@@ -175,8 +175,8 @@ describe("Batch Files MCP Tools", () => {
       const file1Path = path.join(projectPath, "file1.txt");
       const file2Path = path.join(projectPath, "nested/file2.txt");
 
-      expect(fs.existsSync(file1Path)).to.be.true;
-      expect(fs.existsSync(file2Path)).to.be.true;
+      expect(fs.existsSync(file1Path)).to.equal(true);
+      expect(fs.existsSync(file2Path)).to.equal(true);
 
       expect(fs.readFileSync(file1Path, "utf8")).to.equal("Content for file 1");
       expect(fs.readFileSync(file2Path, "utf8")).to.equal("Content for file 2");
@@ -200,7 +200,7 @@ describe("Batch Files MCP Tools", () => {
       });
 
       // Verify response indicates error
-      expect((response as { isError: boolean }).isError).to.be.true;
+      expect((response as { isError: boolean }).isError).to.equal(true);
       expect(
         (response as { content: { text: string }[] }).content[0].text
       ).to.include("Failed");
@@ -210,7 +210,7 @@ describe("Batch Files MCP Tools", () => {
 
       // Verify second file was not created
       const validFilePath = path.join(projectPath, "valid-file.txt");
-      expect(fs.existsSync(validFilePath)).to.be.false;
+      expect(fs.existsSync(validFilePath)).to.equal(false);
     });
 
     it("should continue processing after error when stopOnError is false", async () => {
@@ -243,7 +243,7 @@ describe("Batch Files MCP Tools", () => {
 
       // Verify second file was created
       const validFilePath = path.join(projectPath, "valid-file.txt");
-      expect(fs.existsSync(validFilePath)).to.be.true;
+      expect(fs.existsSync(validFilePath)).to.equal(true);
       expect(fs.readFileSync(validFilePath, "utf8")).to.equal(
         "This should be created"
       );
@@ -271,7 +271,7 @@ describe("Batch Files MCP Tools", () => {
       });
 
       // Verify response
-      expect((response as { isError: boolean }).isError).to.be.false;
+      expect((response as { isError: boolean }).isError).to.equal(false);
       expect(
         (response as { content: { text: string }[] }).content[0].text
       ).to.include("Success");

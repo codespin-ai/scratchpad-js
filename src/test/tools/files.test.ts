@@ -128,13 +128,13 @@ describe("File MCP Tools", () => {
       })) as { isError: boolean; content: { text: string }[] };
 
       // Verify response
-      expect(response.isError).to.be.false;
+      expect(response.isError).to.equal(false);
       expect(response.content).to.be.an("array");
       expect(response.content[0].text).to.include("Successfully wrote file");
 
       // Verify file content
       const fullPath = path.join(projectPath, filePath);
-      expect(fs.existsSync(fullPath)).to.be.true;
+      expect(fs.existsSync(fullPath)).to.equal(true);
       expect(fs.readFileSync(fullPath, "utf8")).to.equal(content);
     });
 
@@ -156,7 +156,7 @@ describe("File MCP Tools", () => {
       })) as { isError: boolean; content: { text: string }[] };
 
       // Verify response
-      expect(response.isError).to.be.false;
+      expect(response.isError).to.equal(false);
       expect(response.content).to.be.an("array");
       expect(response.content[0].text).to.include(
         "Successfully appended to file"
@@ -181,11 +181,11 @@ describe("File MCP Tools", () => {
       })) as { isError: boolean; content: { text: string }[] };
 
       // Verify response
-      expect(response.isError).to.be.false;
+      expect(response.isError).to.equal(false);
 
       // Verify file exists with correct content
       const fullPath = path.join(projectPath, filePath);
-      expect(fs.existsSync(fullPath)).to.be.true;
+      expect(fs.existsSync(fullPath)).to.equal(true);
       expect(fs.readFileSync(fullPath, "utf8")).to.equal(content);
     });
 
@@ -202,12 +202,12 @@ describe("File MCP Tools", () => {
       })) as { isError: boolean; content: { text: string }[] };
 
       // Verify error response
-      expect(response.isError).to.be.true;
+      expect(response.isError).to.equal(true);
       expect(response.content[0].text).to.include("Invalid file path");
 
       // Verify file was not created
       const fullPath = path.join(projectPath, filePath);
-      expect(fs.existsSync(fullPath)).to.be.false;
+      expect(fs.existsSync(fullPath)).to.equal(false);
     });
   });
 });

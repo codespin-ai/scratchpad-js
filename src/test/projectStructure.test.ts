@@ -23,12 +23,12 @@ describe("Project Configuration Structure", () => {
   it("should have removed the init command", () => {
     // Verify init.ts is gone
     const initPath = path.join('src', 'commands', 'init.ts');
-    expect(fs.existsSync(initPath)).to.be.false;
+    expect(fs.existsSync(initPath)).to.equal(false);
   });
   
   it("should have removed the git utility", () => {
     // Verify git.ts is gone 
     const gitPath = path.join('src', 'utils', 'git.ts');
-    expect(fs.existsSync(gitPath)).to.be.false;
+    expect(fs.existsSync(gitPath)).to.equal(false);
   });
 });

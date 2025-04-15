@@ -321,7 +321,7 @@ describe("Execute Commands", function () {
 
       expect(response.content[0].text).to.include("Hello, world!");
       expect(response.content[0].text).to.include("Another test file");
-      expect(response.metadata.hasError).to.be.false;
+      expect(response.metadata.hasError).to.equal(false);
     });
 
     it("should continue execution after errors by default", async function () {
@@ -338,7 +338,7 @@ describe("Execute Commands", function () {
 
       expect(response.content[0].text).to.include("No such file or directory");
       expect(response.content[0].text).to.include("Hello, world!");
-      expect(response.metadata.hasError).to.be.true;
+      expect(response.metadata.hasError).to.equal(true);
       expect(response.metadata.results.length).to.equal(2);
     });
 
@@ -357,7 +357,7 @@ describe("Execute Commands", function () {
 
       expect(response.content[0].text).to.include("No such file or directory");
       expect(response.content[0].text).to.not.include("Hello, world!");
-      expect(response.metadata.hasError).to.be.true;
+      expect(response.metadata.hasError).to.equal(true);
       expect(response.metadata.results.length).to.equal(1);
     });
 
@@ -371,7 +371,7 @@ describe("Execute Commands", function () {
       )) as { content: { text: string }[]; metadata: { hasError: boolean } };
 
       expect(response.content[0].text).to.include("test");
-      expect(response.metadata.hasError).to.be.false;
+      expect(response.metadata.hasError).to.equal(false);
     });
   });
 });

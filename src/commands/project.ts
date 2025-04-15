@@ -34,7 +34,7 @@ function getConfig(): SystemConfig {
       projects: Array.isArray(data.projects) ? data.projects : [],
       debug: data.debug,
     };
-  } catch (_) {
+  } catch {
     console.error("Failed to parse config file, creating new one");
     return { projects: [] };
   }

@@ -172,7 +172,7 @@ describe("Project MCP Tools", () => {
       };
 
       // Verify response
-      expect(response.isError).to.be.false;
+      expect(response.isError).to.equal(false);
       expect(response.content).to.be.an("array").with.lengthOf(1);
       expect(response.content[0].text).to.include("No projects registered");
     });
@@ -197,7 +197,7 @@ describe("Project MCP Tools", () => {
       };
 
       // Verify response
-      expect(response.isError).to.be.false;
+      expect(response.isError).to.equal(false);
       expect(response.content).to.be.an("array").with.lengthOf(1);
       expect(response.content[0].text).to.include(projectPath);
       expect(response.content[0].text).to.include("node:18");
@@ -216,7 +216,7 @@ describe("Project MCP Tools", () => {
       })) as { isError: boolean; content: { text: string }[] };
 
       // Verify error response
-      expect(response.isError).to.be.true;
+      expect(response.isError).to.equal(true);
       expect(response.content).to.be.an("array");
       expect(response.content[0].text).to.include(
         "Invalid or unregistered project"
@@ -239,7 +239,7 @@ describe("Project MCP Tools", () => {
       })) as { isError: boolean; content: { text: string }[] };
 
       // Verify response
-      expect(response.isError).to.be.false;
+      expect(response.isError).to.equal(false);
       expect(response.content).to.be.an("array");
       expect(response.content[0].text).to.include("node:latest");
     });

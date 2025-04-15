@@ -80,8 +80,8 @@ describe("Logging Wrapper", () => {
       const requestsDir = path.join(logsDir, "requests");
 
       // Verify log directory exists
-      expect(fs.existsSync(logsDir)).to.be.true;
-      expect(fs.existsSync(requestsDir)).to.be.true;
+      expect(fs.existsSync(logsDir)).to.equal(true);
+      expect(fs.existsSync(requestsDir)).to.equal(true);
 
       // Check if log files were created
       const logFiles = fs

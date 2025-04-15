@@ -29,22 +29,22 @@ describe("Logger Utility", () => {
 
   describe("isDebugEnabled", () => {
     it("should return false when no config file exists", () => {
-      expect(isDebugEnabled()).to.be.false;
+      expect(isDebugEnabled()).to.equal(false);
     });
 
     it("should return false when debug is not set in config", () => {
       createTestConfig(testDir, { projects: [] });
-      expect(isDebugEnabled()).to.be.false;
+      expect(isDebugEnabled()).to.equal(false);
     });
 
     it("should return false when debug is explicitly set to false", () => {
       createTestConfig(testDir, { projects: [], debug: false });
-      expect(isDebugEnabled()).to.be.false;
+      expect(isDebugEnabled()).to.equal(false);
     });
 
     it("should return true when debug is explicitly set to true", () => {
       createTestConfig(testDir, { projects: [], debug: true });
-      expect(isDebugEnabled()).to.be.true;
+      expect(isDebugEnabled()).to.equal(true);
     });
   });
 
