@@ -47,8 +47,8 @@ export function registerBatchFileTools(server: McpServer): void {
       const results = [];
       let hasError = false;
 
-      for (let i = 0; i < files.length; i++) {
-        const { filePath, content, mode = "overwrite" } = files[i];
+      for (const fileOp of files) {
+        const { filePath, content, mode = "overwrite" } = fileOp;
         
         try {
           if (!validateFilePath(projectDir, filePath)) {

@@ -2,14 +2,14 @@
  * A simplified tool registration function that directly captures the tool handlers.
  */
 export class TestToolRegistration {
-  private tools: Record<string, Function> = {};
+  private tools: Record<string, (...args: unknown[]) => Promise<unknown>> = {};
 
   /**
    * Returns a mock server object with a tool registration method
    */
-  getServer(): any {
+  getServer(): { tool: (name: string, description: string, schema: unknown, handler: (...args: unknown[]) => Promise<unknown>) => void } {
     return {
-      tool: (name: string, description: string, schema: any, handler: Function) => {
+      tool: (name: string, description: string, schema: unknown, handler: (...args: unknown[]) => Promise<unknown>) => {
         this.tools[name] = handler;
       }
     };
@@ -22,7 +22,7 @@ export class TestToolRegistration {
    * @param params Parameters to pass to the tool
    * @returns The tool's response
    */
-  async callTool(name: string, params: any): Promise<any> {
+  async callTool(name: string, params: unknown): Promise<unknown> {
     if (!this.tools[name]) {
       throw new Error(`Tool not found: ${name}`);
     }

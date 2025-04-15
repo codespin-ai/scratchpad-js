@@ -67,7 +67,7 @@ export function cleanupTestEnvironment(tempDir: string): void {
  * @param directory - Directory where to create the config file
  * @param config - Configuration object
  */
-export function createTestConfig(directory: string, config: any): void {
+export function createTestConfig(directory: string, config: Record<string, unknown>): void {
   const configDir = path.join(directory, ".codespin");
   
   // Ensure the directory exists

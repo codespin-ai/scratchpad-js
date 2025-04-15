@@ -5,6 +5,6 @@ interface CommandContext {
   workingDir: string;
 }
 
-export async function start(context: CommandContext): Promise<void> {
+export async function start(_context: CommandContext): Promise<void> {
   await startServer();
 }

@@ -51,19 +51,19 @@ export function mockValidateFilePath(projectDir: string, filePath: string): bool
  * A test tool registration class for simulating the MCP tooling environment
  */
 export class TestToolRegistration {
-  private tools = new Map<string, Function>();
+  private tools = new Map<string, (params: unknown) => Promise<unknown>>();
 
   /**
    * Register a tool for testing
    */
-  registerTool(name: string, handler: Function): void {
+  registerTool(name: string, handler: (params: unknown) => Promise<unknown>): void {
     this.tools.set(name, handler);
   }
 
   /**
    * Call a registered tool with parameters
    */
-  async callTool(name: string, params: any): Promise<any> {
+  async callTool(name: string, params: unknown): Promise<unknown> {
     const handler = this.tools.get(name);
     if (!handler) {
       throw new Error(`Tool not found: ${name}`);

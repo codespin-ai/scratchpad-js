@@ -12,7 +12,7 @@ import {
 describe("Batch Files MCP Tools", () => {
   let testDir: string;
   let projectPath: string;
-  let originalHomeDir: any;
+  let originalHomeDir: unknown;
   let toolRegistration: TestToolRegistration;
 
   beforeEach(() => {
@@ -55,8 +55,8 @@ describe("Batch Files MCP Tools", () => {
         let hasError = false;
 
         try {
-          for (let i = 0; i < files.length; i++) {
-            const { filePath, content, mode = "overwrite" } = files[i];
+          for (const file of files) {
+            const { filePath, content, mode = "overwrite" } = file;
 
             try {
               // Simple validation - just check that the path is inside the project
@@ -135,7 +135,7 @@ describe("Batch Files MCP Tools", () => {
 
   afterEach(() => {
     // Restore original home directory function
-    _setHomeDir(originalHomeDir);
+    _setHomeDir(originalHomeDir as () => string);
 
     // Clean up test environment
     cleanupTestEnvironment(testDir);
@@ -161,7 +161,7 @@ describe("Batch Files MCP Tools", () => {
       // Verify response
       expect(response).to.have.property("isError").to.be.false;
       expect(response).to.have.property("content");
-      expect(response.content[0].text).to.include("Success");
+      expect((response as {content: {text: string}[]}).content[0].text).to.include("Success");
 
       // Verify files were created with correct content
       const file1Path = path.join(projectPath, "file1.txt");
@@ -192,9 +192,9 @@ describe("Batch Files MCP Tools", () => {
       });
 
       // Verify response indicates error
-      expect(response).to.have.property("isError").to.be.true;
-      expect(response.content[0].text).to.include("Failed");
-      expect(response.content[0].text).to.include("Invalid file path");
+      expect((response as {isError: boolean}).isError).to.be.true;
+      expect((response as {content: {text: string}[]}).content[0].text).to.include("Failed");
+      expect((response as {content: {text: string}[]}).content[0].text).to.include("Invalid file path");
 
       // Verify second file was not created
       const validFilePath = path.join(projectPath, "valid-file.txt");
@@ -219,9 +219,9 @@ describe("Batch Files MCP Tools", () => {
       });
 
       // Response should still indicate partial error
-      expect(response.content[0].text).to.include("Failed");
-      expect(response.content[0].text).to.include("Invalid file path");
-      expect(response.content[0].text).to.include("Success");
+      expect((response as {content: {text: string}[]}).content[0].text).to.include("Failed");
+      expect((response as {content: {text: string}[]}).content[0].text).to.include("Invalid file path");
+      expect((response as {content: {text: string}[]}).content[0].text).to.include("Success");
 
       // Verify second file was created
       const validFilePath = path.join(projectPath, "valid-file.txt");
@@ -253,9 +253,9 @@ describe("Batch Files MCP Tools", () => {
       });
 
       // Verify response
-      expect(response).to.have.property("isError").to.be.false;
-      expect(response.content[0].text).to.include("Success");
-      expect(response.content[0].text).to.include("appended to");
+      expect((response as {isError: boolean}).isError).to.be.false;
+      expect((response as {content: {text: string}[]}).content[0].text).to.include("Success");
+      expect((response as {content: {text: string}[]}).content[0].text).to.include("appended to");
 
       // Verify file content was appended
       expect(fs.readFileSync(fullPath, "utf8")).to.equal(

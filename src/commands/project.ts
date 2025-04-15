@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
-import { ProjectConfig, SystemConfig } from "../types/config.js";
+import { SystemConfig } from "../types/config.js";
 
 interface ProjectOptions {
   dirname: string;
@@ -34,7 +34,7 @@ function getConfig(): SystemConfig {
       projects: Array.isArray(data.projects) ? data.projects : [],
       debug: data.debug,
     };
-  } catch (error) {
+  } catch (_) {
     console.error("Failed to parse config file, creating new one");
     return { projects: [] };
   }
@@ -93,12 +93,12 @@ export async function addProject(
 
 export async function removeProject(
   options: ProjectOptions,
-  context: CommandContext
+  _context: CommandContext
 ): Promise<void> {
   const { dirname } = options;
 
   // Resolve to absolute path
-  const projectPath = path.resolve(context.workingDir, dirname);
+  const projectPath = path.resolve(_context.workingDir, dirname);
 
   // Get existing config
   const config = getConfig();
@@ -116,7 +116,7 @@ export async function removeProject(
   }
 }
 
-export async function listProjects(context: CommandContext): Promise<void> {
+export async function listProjects(): Promise<void> {
   const config = getConfig();
 
   if (config.projects.length === 0) {

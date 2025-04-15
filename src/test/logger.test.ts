@@ -6,7 +6,7 @@ import { createTestEnvironment, cleanupTestEnvironment, createTestConfig } from 
 
 describe("Logger Utility", () => {
   let testDir: string;
-  let originalHomeDir: any;
+  let originalHomeDir: unknown;
 
   beforeEach(() => {
     // Set up test environment
@@ -21,7 +21,7 @@ describe("Logger Utility", () => {
 
   afterEach(() => {
     // Restore original function
-    _setHomeDir(originalHomeDir);
+    _setHomeDir(originalHomeDir as () => string);
     
     // Clean up test environment
     cleanupTestEnvironment(testDir);
@@ -83,7 +83,6 @@ describe("Logger Utility", () => {
       const requestsDir = path.join(logsDir, "requests");
       
       // Check main log file
-      const datePart = new Date().toISOString().split('T')[0].replace(/-/g, '-');
       const logFiles = fs.readdirSync(logsDir).filter(file => file.endsWith('.log'));
       expect(logFiles.length).to.be.at.least(1);
       
@@ -109,7 +108,11 @@ describe("Logger Utility", () => {
       const requestFiles = fs.readdirSync(requestsDir);
       const responseFile = requestFiles.find(file => file.includes('_response.json'));
       
-      const responseContent = fs.readFileSync(path.join(requestsDir, responseFile!), 'utf8');
+      if (!responseFile) {
+        throw new Error("Response file not found");
+      }
+      
+      const responseContent = fs.readFileSync(path.join(requestsDir, responseFile), 'utf8');
       const parsedResponse = JSON.parse(responseContent);
       
       expect(parsedResponse).to.have.property('error');

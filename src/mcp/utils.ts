@@ -30,7 +30,7 @@ export function getProjects(): ProjectConfig[] {
   try {
     const data = JSON.parse(fs.readFileSync(projectsFile, "utf8"));
     return Array.isArray(data.projects) ? data.projects : [];
-  } catch (error) {
+  } catch (_) {
     console.error("Failed to parse projects file");
     return [];
   }
@@ -89,7 +89,7 @@ export function getSystemConfig(): SystemConfig | null {
       projects: Array.isArray(config.projects) ? config.projects : [],
       debug: config.debug 
     };
-  } catch (error) {
+  } catch (_) {
     console.error("Failed to parse system config file");
     return { projects: [] };
   }
@@ -128,14 +128,14 @@ export async function executeInContainer(
     return await execAsync(dockerCommand, {
       maxBuffer: 10 * 1024 * 1024, // 10MB buffer
     });
-  } catch (error: any) {
-    const stdout = error.stdout || "";
-    const stderr = error.stderr || "";
+  } catch (error) {
+    const stdout = (error as { stdout?: string }).stdout || "";
+    const stderr = (error as { stderr?: string }).stderr || "";
     const combinedOutput = `${stdout}${stderr ? `\nSTDERR:\n${stderr}` : ""}`;
 
     throw new Error(
       `Docker execution failed:\n${
-        error.message ? error.message + "\n" : ""
+        (error as Error).message ? (error as Error).message + "\n" : ""
       }${combinedOutput}`
     );
   }

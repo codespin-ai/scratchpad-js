@@ -8,7 +8,7 @@ import { TestToolRegistration } from "./mcp-test-util.js";
 
 describe("Logging Wrapper", () => {
   let testDir: string;
-  let originalHomeDir: any;
+  let originalHomeDir: unknown;
   let toolRegistration: TestToolRegistration;
 
   beforeEach(() => {
@@ -31,7 +31,7 @@ describe("Logging Wrapper", () => {
 
   afterEach(() => {
     // Restore original home directory function
-    _setHomeDir(originalHomeDir);
+    _setHomeDir(originalHomeDir as () => string);
     
     // Clean up test environment
     cleanupTestEnvironment(testDir);
@@ -47,7 +47,7 @@ describe("Logging Wrapper", () => {
         "test_tool",
         "A test tool for logging",
         {},
-        async (params: { testParam?: string }) => {
+        async () => {
           return {
             isError: false,
             content: [{ type: "text", text: "Success" }]
@@ -63,7 +63,7 @@ describe("Logging Wrapper", () => {
         "wrapped_test_tool",
         "A wrapped test tool for logging",
         {},
-        async (params: { testParam?: string }) => {
+        async () => {
           return {
             isError: false,
             content: [{ type: "text", text: "Success from wrapped tool" }]
@@ -126,7 +126,7 @@ describe("Logging Wrapper", () => {
       // Execute the tool (and catch the error)
       try {
         await toolRegistration.callTool("wrapped_error_tool", {});
-      } catch (error) {
+      } catch (_e) {
         // Error is expected
       }
       

@@ -51,8 +51,7 @@ export function registerBatchTools(server: McpServer): void {
       const results = [];
       let hasError = false;
 
-      for (let i = 0; i < commands.length; i++) {
-        const command = commands[i];
+      for (const command of commands) {
         try {
           const { stdout, stderr } = await executeInContainer(
             projectDir,

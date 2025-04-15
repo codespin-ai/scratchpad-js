@@ -9,7 +9,7 @@ import process from "node:process";
 setInvokeMode("cli");
 
 export async function main() {
-  yargs(process.argv.slice(2))
+  await yargs(process.argv.slice(2))
     .command(
       "start",
       "Start the MCP server for executing commands in containers",
@@ -40,7 +40,10 @@ export async function main() {
                 });
             },
             async (argv) => {
-              await addProject(argv as any, { workingDir: process.cwd() });
+              await addProject(
+                { dirname: argv.dirname as string, image: argv.image as string },
+                { workingDir: process.cwd() }
+              );
             }
           )
           .command(
@@ -54,19 +57,22 @@ export async function main() {
               });
             },
             async (argv) => {
-              await removeProject(argv as any, { workingDir: process.cwd() });
+              await removeProject(
+                { dirname: argv.dirname as string },
+                { workingDir: process.cwd() }
+              );
             }
           )
           .demandCommand(1, "You must specify a project command (add/remove)")
           .command("list", "List all registered projects", {}, async () => {
-            await listProjects({ workingDir: process.cwd() });
+            await listProjects();
           })
           .demandCommand(
             1,
             "You must specify a project command (add/remove/list)"
           );
       },
-      () => {}
+      () => { /* empty function required by yargs */ }
     )
     .command("version", "Display the current version", {}, async () => {
       writeToConsole("Codebox v1.0.0");

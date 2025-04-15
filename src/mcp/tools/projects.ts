@@ -3,7 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as fs from "fs";
 import * as path from "path";
 import * as zod from "zod";
-import { getProjects, getSystemConfig } from "../utils.js";
+import { getProjects } from "../utils.js";
 import { ProjectConfig } from "../../types/config.js";
 
 // Define the input schema type
