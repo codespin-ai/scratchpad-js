@@ -33,6 +33,11 @@ export async function main() {
             type: "boolean",
             demandOption: false,
             describe: "Create a system-level configuration at $HOME/.codespin/codebox.json",
+          })
+          .option("debug", {
+            type: "boolean",
+            demandOption: false,
+            describe: "Enable debug logging of MCP calls to $HOME/.codespin/logs",
           }),
       async (argv) => {
         await init(argv as any, { workingDir: process.cwd() });

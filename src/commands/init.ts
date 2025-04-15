@@ -8,6 +8,7 @@ interface InitOptions {
   force?: boolean;
   image: string;
   system?: boolean;
+  debug?: boolean;
 }
 
 interface CommandContext {
@@ -19,7 +20,7 @@ export async function init(
   context: CommandContext
 ): Promise<void> {
   const { workingDir } = context;
-  const { force, image, system } = options;
+  const { force, image, system, debug } = options;
 
   if (!image) {
     throw new Error("Docker image is required. Use --image <image_name>");
@@ -49,15 +50,16 @@ export async function init(
       }
     }
 
-    // Create config file with updated dockerImage
+    // Create config file with updated dockerImage and debug flag if provided
     const config = {
       ...existingData,
       dockerImage: image,
+      ...(debug !== undefined ? { debug } : {})
     };
 
     fs.writeFileSync(configFile, JSON.stringify(config, null, 2), "utf8");
     console.log(
-      `Created system configuration at ${configFile} with Docker image: ${image}`
+      `Created system configuration at ${configFile} with Docker image: ${image}${debug ? ' and debug enabled' : ''}`
     );
   } else {
     // Project-level initialization
@@ -85,11 +87,12 @@ export async function init(
     // Create config file
     const config = {
       dockerImage: image,
+      ...(debug !== undefined ? { debug } : {})
     };
 
     fs.writeFileSync(configFile, JSON.stringify(config, null, 2), "utf8");
     console.log(
-      `Created configuration at ${configFile} with Docker image: ${image}`
+      `Created configuration at ${configFile} with Docker image: ${image}${debug ? ' and debug enabled' : ''}`
     );
   }
 }

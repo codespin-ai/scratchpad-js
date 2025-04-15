@@ -49,6 +49,25 @@ When a Docker image is needed for a project, Codebox checks:
 
 This allows you to define a default image for all projects while allowing project-specific overrides.
 
+### Debug Logging
+
+You can enable debug logging by adding a `debug` flag to your system-wide configuration:
+
+```json
+{
+  "dockerImage": "node:18",
+  "debug": true
+}
+```
+
+When debug logging is enabled:
+- All MCP method calls will be logged to `$HOME/.codespin/logs/*.log` files (organized by date)
+- Request payloads and responses will be saved to `$HOME/.codespin/logs/requests/` directory
+- Each log entry includes method name, timestamp, processing time, and a unique request ID
+- Request and response files are named with date and request ID for easy correlation
+
+This is useful for debugging, development, and auditing purposes. Log files should be cleaned up periodically as they are not automatically rotated or deleted.
+
 ## Docker Image Requirements
 
 The Docker image must:

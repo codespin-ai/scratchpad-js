@@ -5,9 +5,12 @@ import { registerFileTools } from "./tools/files.js";
 import { registerProjectTools } from "./tools/projects.js";
 import { registerExecuteTools } from "./tools/execute.js";
 import { registerBatchTools } from "./tools/batch.js";
-import { registerBatchFileTools } from "./tools/batch_files.js";
+import { registerBatchFileTools } from "./tools/batchFiles.js";
+import { addLoggingToServer } from "./loggingWrapper.js";
+import { isDebugEnabled } from "../utils/logger.js";
 
 export async function createServer(): Promise<McpServer> {
+  // Create either a regular or logging-enabled server based on the server type
   const server = new McpServer(
     {
       name: "codebox",
@@ -22,14 +25,17 @@ export async function createServer(): Promise<McpServer> {
     }
   );
 
-  // Register all tools
-  registerFileTools(server);
-  registerProjectTools(server);
-  registerExecuteTools(server);
-  registerBatchTools(server);
-  registerBatchFileTools(server);
+  // If debug mode is enabled, add logging
+  const serverWithLogging = isDebugEnabled() ? addLoggingToServer(server) : server;
 
-  return server;
+  // Register all tools
+  registerFileTools(serverWithLogging);
+  registerProjectTools(serverWithLogging);
+  registerExecuteTools(serverWithLogging);
+  registerBatchTools(serverWithLogging);
+  registerBatchFileTools(serverWithLogging);
+
+  return serverWithLogging;
 }
 
 export async function startServer(): Promise<void> {

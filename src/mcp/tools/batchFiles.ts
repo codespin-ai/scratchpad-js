@@ -1,4 +1,4 @@
-// src/mcp/tools/batch_files.ts
+// src/mcp/tools/batchFiles.ts
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as zod from "zod";
 import * as fs from "fs";
