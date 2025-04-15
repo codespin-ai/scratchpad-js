@@ -4,9 +4,14 @@ import * as path from 'path';
 import * as os from 'os';
 import { v4 as uuidv4 } from 'uuid';
 
+// Get the home directory - this will be mocked in tests
+function getHomeDir(): string {
+  return os.homedir();
+}
+
 // Create the necessary directory structure
 function ensureLogDirectories() {
-  const logDir = path.join(os.homedir(), '.codespin', 'logs');
+  const logDir = path.join(getHomeDir(), '.codespin', 'logs');
   const requestsDir = path.join(logDir, 'requests');
   
   if (!fs.existsSync(logDir)) {
@@ -45,7 +50,7 @@ function getDatePart() {
 
 // Check if debug mode is enabled in config
 export function isDebugEnabled(): boolean {
-  const configPath = path.join(os.homedir(), '.codespin', 'codebox.json');
+  const configPath = path.join(getHomeDir(), '.codespin', 'codebox.json');
   
   if (!fs.existsSync(configPath)) {
     return false;
@@ -101,4 +106,9 @@ export function logMcpCall({
   } catch (error) {
     console.error('Error logging MCP call:', error);
   }
+}
+
+// Used for testing - allows for mocking the home directory
+export function _setHomeDir(fn: () => string) {
+  (getHomeDir as any) = fn;
 }

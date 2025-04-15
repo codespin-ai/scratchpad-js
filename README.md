@@ -76,6 +76,28 @@ The Docker image must:
 - Have compatible versions with your project dependencies
 - Be pre-built and available locally or in a registry
 
+## Testing
+
+Codebox includes a comprehensive test suite using Mocha and Chai. The tests cover:
+
+- Logger utility and debug mode functionality
+- MCP tools for file operations (write_file, write_batch_files)
+- MCP tools for project management (list_projects, get_project_config)
+- Logging wrapper for debugging and request tracing
+
+To run the tests:
+
+```bash
+# Run all tests
+npm test
+
+# Run specific test category
+npm run test:grep "Logger Utility"
+npm run test:grep "File MCP Tools"
+```
+
+The test suite uses a sandbox environment with temporary directories to avoid affecting your actual system configuration. It mocks the necessary components to isolate test executions and ensure test stability.
+
 ## Complete Workflow Example
 
 ```bash
