@@ -1,11 +1,7 @@
 // src/mcp/tools/batch.ts
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as zod from "zod";
-import {
-  validateProject,
-  getDockerImage,
-  executeInContainer,
-} from "../utils.js";
+import { validateProject, executeInContainer } from "../utils.js";
 
 export function registerBatchTools(server: McpServer): void {
   server.tool(
@@ -37,19 +33,6 @@ export function registerBatchTools(server: McpServer): void {
         };
       }
 
-      const dockerImage = getDockerImage(projectDir);
-      if (!dockerImage) {
-        return {
-          isError: true,
-          content: [
-            {
-              type: "text",
-              text: `Error: No Docker image configured for this project. Run 'codebox init' in the project directory.`,
-            },
-          ],
-        };
-      }
-
       const results = [];
       let hasError = false;
 
@@ -57,8 +40,7 @@ export function registerBatchTools(server: McpServer): void {
         try {
           const { stdout, stderr } = await executeInContainer(
             projectDir,
-            command,
-            dockerImage
+            command
           );
           const output = stdout + (stderr ? `\nSTDERR:\n${stderr}` : "");
 

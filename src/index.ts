@@ -48,13 +48,29 @@ export async function main() {
                 })
                 .option("image", {
                   type: "string",
-                  demandOption: true,
                   describe: "Docker image to use for this project",
+                })
+                .option("container", {
+                  type: "string",
+                  describe:
+                    "Container name to execute commands in (for running containers)",
+                })
+                .check((argv) => {
+                  if (!argv.image && !argv.container) {
+                    throw new Error(
+                      "Either --image or --container must be specified"
+                    );
+                  }
+                  return true;
                 });
             },
             async (argv) => {
               await addProject(
-                { dirname: argv.dirname, image: argv.image },
+                {
+                  dirname: argv.dirname,
+                  image: argv.image,
+                  containerName: argv.container,
+                },
                 { workingDir: process.cwd() }
               );
             }

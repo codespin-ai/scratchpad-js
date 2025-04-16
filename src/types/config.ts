@@ -1,6 +1,7 @@
 export interface ProjectConfig {
   path: string;
-  dockerImage: string;
+  dockerImage?: string;
+  containerName?: string;
 }
 
 export interface SystemConfig {

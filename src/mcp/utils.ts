@@ -97,7 +97,7 @@ export function getSystemConfig(): SystemConfig | null {
   }
 }
 
-export function getDockerImage(projectDir: string): string | null {
+export function getProjectConfig(projectDir: string): ProjectConfig | null {
   const resolvedPath = path.resolve(projectDir);
   const projects = getProjects();
 
@@ -112,24 +112,65 @@ export function getDockerImage(projectDir: string): string | null {
     );
   });
 
-  return project ? project.dockerImage : null;
+  return project || null;
+}
+
+export function getDockerImage(projectDir: string): string | null {
+  const project = getProjectConfig(projectDir);
+  return project ? project.dockerImage || null : null;
 }
 
 export async function executeInContainer(
   projectDir: string,
   command: string,
-  dockerImage: string
+  dockerImage?: string
 ): Promise<ExecuteResult> {
-  const dockerCommand = `docker run -i --rm \
-  -v "${projectDir}:${projectDir}" \
-  --workdir="${projectDir}" \
-  --user=${uid}:${gid} \
-  ${dockerImage} /bin/sh -c "${command}"`;
+  const project = getProjectConfig(projectDir);
+  if (!project) {
+    throw new Error(`Project not registered: ${projectDir}`);
+  }
 
   try {
-    return await execAsync(dockerCommand, {
-      maxBuffer: 10 * 1024 * 1024, // 10MB buffer
-    });
+    // Check if project uses a container name
+    if (project.containerName) {
+      // Check if container is running
+      const { stdout: containerCheck } = await execAsync(
+        `docker ps -q -f "name=^${project.containerName}$"`
+      );
+
+      if (!containerCheck.trim()) {
+        throw new Error(
+          `Container '${project.containerName}' not found or not running`
+        );
+      }
+
+      // Execute command in the running container
+      const dockerCommand = `docker exec -i ${project.containerName} /bin/sh -c "${command}"`;
+      return await execAsync(dockerCommand, {
+        maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+      });
+    } else if (dockerImage || project.dockerImage) {
+      // Use regular Docker container with image
+      const imageToUse = dockerImage || project.dockerImage;
+
+      if (!imageToUse) {
+        throw new Error("No Docker image configured for this project");
+      }
+
+      const dockerCommand = `docker run -i --rm \
+      -v "${projectDir}:${projectDir}" \
+      --workdir="${projectDir}" \
+      --user=${uid}:${gid} \
+      ${imageToUse} /bin/sh -c "${command}"`;
+
+      return await execAsync(dockerCommand, {
+        maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+      });
+    } else {
+      throw new Error(
+        "No Docker image or container configured for this project"
+      );
+    }
   } catch (error) {
     const stdout = (error as { stdout?: string }).stdout || "";
     const stderr = (error as { stderr?: string }).stderr || "";

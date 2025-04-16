@@ -15,13 +15,21 @@ Requires Docker installed.
 - Commands execute in isolated Docker containers with volume mounts to project directories
 - File operations are constrained to registered project paths
 - Containers have network access but isolated filesystem
+- Supports both standalone Docker images and executing in running containers
 
 ## Usage
 
 ```bash
 # Register projects with Docker images
 codebox project add /path/to/project --image node:18
+
+# Or register with existing containers (like from docker-compose)
+codebox project add /path/to/project --container container-name
+
+# List registered projects
 codebox project list
+
+# Remove a project
 codebox project remove /path/to/project
 
 # This is called by the client (don't do this manually)
@@ -34,13 +42,13 @@ Codebox uses a centralized configuration system. All configuration is stored in 
 
 - `$HOME/.codespin/codebox.json`
 
-The configuration file contains an array of projects, each with its own path and associated Docker image:
+The configuration file contains an array of projects, each with its own path and associated Docker image or container name:
 
 ```json
 {
   "projects": [
     { "path": "/path/to/project1", "dockerImage": "node:18" },
-    { "path": "/path/to/project2", "dockerImage": "python:3.9" }
+    { "path": "/path/to/project2", "containerName": "app-backend" }
   ],
   "debug": false
 }
@@ -52,9 +60,7 @@ You can enable debug logging by adding a `debug` flag to your configuration:
 
 ```json
 {
-  "projects": [
-    { "path": "/path/to/project1", "dockerImage": "node:18" }
-  ],
+  "projects": [{ "path": "/path/to/project1", "dockerImage": "node:18" }],
   "debug": true
 }
 ```
@@ -75,6 +81,26 @@ The Docker image must:
 - Contain all development tools needed (compilers, interpreters, package managers)
 - Have compatible versions with your project dependencies
 - Be pre-built and available locally or in a registry
+
+## Docker Container Mode
+
+Instead of running commands in temporary containers, you can execute commands in already running containers. This is especially useful when working with docker-compose environments where services are already running.
+
+To use this mode:
+
+1. Start your containers with docker-compose or directly with docker
+2. Find the container name with `docker ps`
+3. Register your project with the container name
+
+```bash
+# List running containers
+docker ps --format "{{.Names}}"
+
+# Register project with container name
+codebox project add /path/to/project --container my-app-backend
+```
+
+Codebox will execute commands directly in the running container using `docker exec` rather than starting a new container each time.
 
 ## Testing
 
@@ -202,7 +228,7 @@ Lists registered projects with status. For each project, shows:
 
 - Path to the project
 - Whether the project exists
-- Docker image being used
+- Docker image being used or container name
 
 ### get_project_config
 
