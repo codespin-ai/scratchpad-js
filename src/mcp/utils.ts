@@ -144,8 +144,8 @@ export async function executeInContainer(
         );
       }
 
-      // Execute command in the running container
-      const dockerCommand = `docker exec -i ${project.containerName} /bin/sh -c "${command}"`;
+      // Execute command in the running container with the user's UID/GID
+      const dockerCommand = `docker exec -i --user=${uid}:${gid} --workdir="${projectDir}" ${project.containerName} /bin/sh -c "${command}"`;
       return await execAsync(dockerCommand, {
         maxBuffer: 10 * 1024 * 1024, // 10MB buffer
       });
