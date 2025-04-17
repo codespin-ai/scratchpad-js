@@ -27,9 +27,15 @@ describe("File MCP Tools", () => {
     projectPath = path.join(testDir, "test-project");
     fs.mkdirSync(projectPath, { recursive: true });
 
-    // Register project in system config
+    // Register project in system config - updated to new format
     createTestConfig(testDir, {
-      projects: [{ path: projectPath, dockerImage: "node:18" }],
+      projects: [
+        {
+          name: "test-project",
+          hostPath: projectPath,
+          dockerImage: "node:18",
+        },
+      ],
     });
 
     // Set up test tool registration

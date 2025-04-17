@@ -37,14 +37,15 @@ export async function main() {
       (yargs) => {
         return yargs
           .command(
-            "add <dirname>",
+            "add [dirname]",
             "Add a project directory to the registry",
             (yargs) => {
               return yargs
                 .positional("dirname", {
-                  describe: "Path to the project directory",
+                  describe:
+                    "Path to the project directory (defaults to current directory)",
                   type: "string",
-                  demandOption: true,
+                  default: ".",
                 })
                 .option("image", {
                   type: "string",
@@ -54,6 +55,16 @@ export async function main() {
                   type: "string",
                   describe:
                     "Container name to execute commands in (for running containers)",
+                })
+                .option("name", {
+                  type: "string",
+                  describe:
+                    "Custom name for the project (defaults to directory name)",
+                })
+                .option("containerPath", {
+                  type: "string",
+                  describe:
+                    "Path inside the container to mount the project (defaults to /app)",
                 })
                 .check((argv) => {
                   if (!argv.image && !argv.container) {
@@ -70,24 +81,36 @@ export async function main() {
                   dirname: argv.dirname,
                   image: argv.image,
                   containerName: argv.container,
+                  name: argv.name,
+                  containerPath: argv.containerPath,
                 },
                 { workingDir: process.cwd() }
               );
             }
           )
           .command(
-            "remove <dirname>",
-            "Remove a project directory from the registry",
+            "remove [target]",
+            "Remove a project from the registry by name or path",
             (yargs) => {
-              return yargs.positional("dirname", {
-                describe: "Path to the project directory to remove",
-                type: "string",
-                demandOption: true,
-              });
+              return yargs
+                .positional("target", {
+                  describe:
+                    "Name or path of the project to remove (defaults to current directory)",
+                  type: "string",
+                  default: ".",
+                })
+                .option("name", {
+                  type: "string",
+                  describe:
+                    "Name of the project to remove (alternative to specifying in target)",
+                });
             },
             async (argv) => {
               await removeProject(
-                { dirname: argv.dirname },
+                {
+                  target: argv.target,
+                  name: argv.name,
+                },
                 { workingDir: process.cwd() }
               );
             }

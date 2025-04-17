@@ -1,6 +1,6 @@
 {
   "name": "@codespin/codebox",
-  "version": "0.0.20",
+  "version": "0.0.21",
   "description": "An MCP server for executing commands in Docker containers",
   "type": "module",
   "main": "dist/index.js",
@@ -27,7 +27,7 @@
     "source-map-support": "^0.5.21",
     "uuid": "^11.1.0",
     "yargs": "^17.7.2",
-    "zod": "^3.24.2"
+    "zod": "^3.24.3"
   },
   "devDependencies": {
     "@types/chai": "^5.2.1",

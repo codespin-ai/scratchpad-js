@@ -48,17 +48,17 @@ export function validateProject(projectDir: string): boolean {
 
   // Normalize paths by removing trailing slashes for consistent comparison
   const normalizedInputPath = resolvedPath.replace(/\/+$/, "");
-  const registeredProjects = getProjects().map((p) =>
-    p.path.replace(/\/+$/, "")
-  );
+  const registeredProjects = getProjects();
 
-  // Check if the normalized input path is a subdirectory of any registered project
-  for (const registeredPath of registeredProjects) {
+  // Check if the normalized input path is a registered project
+  for (const project of registeredProjects) {
+    const normalizedProjectPath = project.hostPath.replace(/\/+$/, "");
+
     // Check if the input path starts with a registered path followed by either
     // end of string or a path separator
     if (
-      normalizedInputPath === registeredPath ||
-      normalizedInputPath.startsWith(registeredPath + path.sep)
+      normalizedInputPath === normalizedProjectPath ||
+      normalizedInputPath.startsWith(normalizedProjectPath + path.sep)
     ) {
       return true;
     }
@@ -103,7 +103,7 @@ export function getProjectConfig(projectDir: string): ProjectConfig | null {
 
   // Find the project configuration
   const project = projects.find((p) => {
-    const normalizedProjectPath = p.path.replace(/\/+$/, "");
+    const normalizedProjectPath = p.hostPath.replace(/\/+$/, "");
     const normalizedInputPath = resolvedPath.replace(/\/+$/, "");
 
     return (
@@ -152,14 +152,15 @@ export async function executeInContainer(
     } else if (dockerImage || project.dockerImage) {
       // Use regular Docker container with image
       const imageToUse = dockerImage || project.dockerImage;
+      const containerPath = project.containerPath || "/app";
 
       if (!imageToUse) {
         throw new Error("No Docker image configured for this project");
       }
 
       const dockerCommand = `docker run -i --rm \
-      -v "${projectDir}:${projectDir}" \
-      --workdir="${projectDir}" \
+      -v "${project.hostPath}:${containerPath}" \
+      --workdir="${containerPath}" \
       --user=${uid}:${gid} \
       ${imageToUse} /bin/sh -c "${command}"`;
 

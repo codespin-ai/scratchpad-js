@@ -110,9 +110,15 @@ describe("Container Execute Commands", function () {
       return;
     }
 
-    // Register project in system config with container name
+    // Register project in system config with container name - updated to new format
     createTestConfig(testDir, {
-      projects: [{ path: projectPath, containerName }],
+      projects: [
+        {
+          name: "test-project",
+          hostPath: projectPath,
+          containerName: containerName,
+        },
+      ],
     });
 
     // Set up test tool registration
@@ -153,7 +159,7 @@ describe("Container Execute Commands", function () {
         const configPath = path.join(testDir, ".codespin", "codebox.json");
         const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
         const projectConfig = config.projects.find(
-          (p: { path: string }) => p.path === projectDir
+          (p: { hostPath: string }) => p.hostPath === projectDir
         );
 
         if (!projectConfig || !projectConfig.containerName) {
@@ -237,11 +243,11 @@ describe("Container Execute Commands", function () {
           };
         }
 
-        // Read config to get container name
+        // Read config to get container name - updated to use hostPath
         const configPath = path.join(testDir, ".codespin", "codebox.json");
         const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
         const projectConfig = config.projects.find(
-          (p: { path: string }) => p.path === projectDir
+          (p: { hostPath: string }) => p.hostPath === projectDir
         );
 
         if (!projectConfig || !projectConfig.containerName) {

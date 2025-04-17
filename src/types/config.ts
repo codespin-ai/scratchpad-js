@@ -1,5 +1,8 @@
+// src/types/config.ts
 export interface ProjectConfig {
-  path: string;
+  name: string;
+  hostPath: string;
+  containerPath?: string;
   dockerImage?: string;
   containerName?: string;
 }
