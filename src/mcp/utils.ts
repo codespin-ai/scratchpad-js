@@ -36,6 +36,20 @@ export function getProjects(): ProjectConfig[] {
   }
 }
 
+export function getProjectByName(projectName: string): ProjectConfig | null {
+  const projects = getProjects();
+  return projects.find((p) => p.name === projectName) || null;
+}
+
+export function validateProjectName(projectName: string): boolean {
+  const project = getProjectByName(projectName);
+  return (
+    project !== null &&
+    fs.existsSync(project.hostPath) &&
+    fs.statSync(project.hostPath).isDirectory()
+  );
+}
+
 export function validateProject(projectDir: string): boolean {
   const resolvedPath = path.resolve(projectDir);
   // Ensure path exists and is a directory
@@ -115,19 +129,19 @@ export function getProjectConfig(projectDir: string): ProjectConfig | null {
   return project || null;
 }
 
-export function getDockerImage(projectDir: string): string | null {
-  const project = getProjectConfig(projectDir);
+export function getDockerImage(projectName: string): string | null {
+  const project = getProjectByName(projectName);
   return project ? project.dockerImage || null : null;
 }
 
 export async function executeInContainer(
-  projectDir: string,
+  projectName: string,
   command: string,
   dockerImage?: string
 ): Promise<ExecuteResult> {
-  const project = getProjectConfig(projectDir);
+  const project = getProjectByName(projectName);
   if (!project) {
-    throw new Error(`Project not registered: ${projectDir}`);
+    throw new Error(`Project not registered: ${projectName}`);
   }
 
   try {
@@ -145,7 +159,7 @@ export async function executeInContainer(
       }
 
       // Execute command in the running container with the user's UID/GID
-      const dockerCommand = `docker exec -i --user=${uid}:${gid} --workdir="${projectDir}" ${project.containerName} /bin/sh -c "${command}"`;
+      const dockerCommand = `docker exec -i --user=${uid}:${gid} --workdir="${project.hostPath}" ${project.containerName} /bin/sh -c "${command}"`;
       return await execAsync(dockerCommand, {
         maxBuffer: 10 * 1024 * 1024, // 10MB buffer
       });

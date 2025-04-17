@@ -1,10 +1,7 @@
 // src/mcp/tools/execute.ts
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as zod from "zod";
-import {
-  validateProject,
-  executeInContainer,
-} from "../utils.js";
+import { validateProjectName, executeInContainer } from "../utils.js";
 
 export function registerExecuteTools(server: McpServer): void {
   server.tool(
@@ -12,18 +9,16 @@ export function registerExecuteTools(server: McpServer): void {
     "Execute a command in a Docker container for a specific project",
     {
       command: zod.string().describe("The command to execute in the container"),
-      projectDir: zod
-        .string()
-        .describe("The absolute path to the project directory"),
+      projectName: zod.string().describe("The name of the project"),
     },
-    async ({ command, projectDir }) => {
-      if (!validateProject(projectDir)) {
+    async ({ command, projectName }) => {
+      if (!validateProjectName(projectName)) {
         return {
           isError: true,
           content: [
             {
               type: "text",
-              text: `Error: Invalid or unregistered project directory: ${projectDir}`,
+              text: `Error: Invalid or unregistered project: ${projectName}`,
             },
           ],
         };
@@ -31,7 +26,7 @@ export function registerExecuteTools(server: McpServer): void {
 
       try {
         const { stdout, stderr } = await executeInContainer(
-          projectDir,
+          projectName,
           command
         );
         const output = stdout + (stderr ? `\nSTDERR:\n${stderr}` : "");

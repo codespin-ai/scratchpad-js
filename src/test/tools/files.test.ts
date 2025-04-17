@@ -14,6 +14,7 @@ describe("File MCP Tools", () => {
   let projectPath: string;
   let originalHomeDir: unknown;
   let toolRegistration: TestToolRegistration;
+  const projectName = "test-project";
 
   beforeEach(() => {
     // Set up test environment
@@ -27,11 +28,11 @@ describe("File MCP Tools", () => {
     projectPath = path.join(testDir, "test-project");
     fs.mkdirSync(projectPath, { recursive: true });
 
-    // Register project in system config - updated to new format
+    // Register project in system config with new format
     createTestConfig(testDir, {
       projects: [
         {
-          name: "test-project",
+          name: projectName,
           hostPath: projectPath,
           dockerImage: "node:18",
         },
@@ -50,19 +51,32 @@ describe("File MCP Tools", () => {
       async (params: unknown) => {
         try {
           const {
-            projectDir,
+            projectName,
             filePath,
             content,
             mode = "overwrite",
           } = params as {
-            projectDir: string;
+            projectName: string;
             filePath: string;
             content: string;
             mode?: "overwrite" | "append";
           };
 
+          // In our test, we're only supporting one project
+          if (projectName !== "test-project") {
+            return {
+              isError: true,
+              content: [
+                {
+                  type: "text",
+                  text: `Error: Invalid or unregistered project: ${projectName}`,
+                },
+              ],
+            };
+          }
+
           // Simple validation - just check that the path is inside the project
-          const resolvedProjectDir = path.resolve(projectDir);
+          const resolvedProjectDir = path.resolve(projectPath);
           const fullPath = path.join(resolvedProjectDir, filePath);
 
           if (!fullPath.startsWith(resolvedProjectDir)) {
@@ -125,9 +139,9 @@ describe("File MCP Tools", () => {
       const filePath = "test-file.txt";
       const content = "Hello, world!";
 
-      // Call write_file tool
+      // Call write_file tool with projectName instead of projectDir
       const response = (await toolRegistration.callTool("write_file", {
-        projectDir: projectPath,
+        projectName: projectName,
         filePath,
         content,
         mode: "overwrite",
@@ -153,9 +167,9 @@ describe("File MCP Tools", () => {
       const fullPath = path.join(projectPath, filePath);
       fs.writeFileSync(fullPath, initialContent);
 
-      // Call write_file with append mode
+      // Call write_file with append mode and projectName
       const response = (await toolRegistration.callTool("write_file", {
-        projectDir: projectPath,
+        projectName: projectName,
         filePath,
         content: appendContent,
         mode: "append",
@@ -178,9 +192,9 @@ describe("File MCP Tools", () => {
       const filePath = "nested/dir/structure/test.txt";
       const content = "Nested file content";
 
-      // Call write_file tool
+      // Call write_file tool with projectName
       const response = (await toolRegistration.callTool("write_file", {
-        projectDir: projectPath,
+        projectName: projectName,
         filePath,
         content,
         mode: "overwrite",
@@ -199,9 +213,9 @@ describe("File MCP Tools", () => {
       const filePath = "../outside/project.txt";
       const content = "This should fail";
 
-      // Call write_file tool
+      // Call write_file tool with projectName
       const response = (await toolRegistration.callTool("write_file", {
-        projectDir: projectPath,
+        projectName: projectName,
         filePath,
         content,
         mode: "overwrite",
@@ -214,6 +228,24 @@ describe("File MCP Tools", () => {
       // Verify file was not created
       const fullPath = path.join(projectPath, filePath);
       expect(fs.existsSync(fullPath)).to.equal(false);
+    });
+
+    it("should return error for invalid project name", async () => {
+      const filePath = "test.txt";
+      const content = "This should fail";
+
+      // Call write_file tool with an invalid project name
+      const response = (await toolRegistration.callTool("write_file", {
+        projectName: "non-existent-project",
+        filePath,
+        content,
+      })) as { isError: boolean; content: { text: string }[] };
+
+      // Verify error response
+      expect(response.isError).to.equal(true);
+      expect(response.content[0].text).to.include(
+        "Invalid or unregistered project"
+      );
     });
   });
 });

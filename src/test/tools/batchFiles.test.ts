@@ -14,6 +14,7 @@ describe("Batch Files MCP Tools", () => {
   let projectPath: string;
   let originalHomeDir: unknown;
   let toolRegistration: TestToolRegistration;
+  const projectName = "test-project";
 
   beforeEach(() => {
     // Set up test environment
@@ -27,11 +28,11 @@ describe("Batch Files MCP Tools", () => {
     projectPath = path.join(testDir, "test-project");
     fs.mkdirSync(projectPath, { recursive: true });
 
-    // Register project in system config - updated to new format
+    // Register project in system config with new format
     createTestConfig(testDir, {
       projects: [
         {
-          name: "test-project",
+          name: projectName,
           hostPath: projectPath,
           dockerImage: "node:18",
         },
@@ -50,11 +51,11 @@ describe("Batch Files MCP Tools", () => {
       async (params: unknown) => {
         // Type assertion to extract parameters correctly
         const {
-          projectDir,
+          projectName,
           files,
           stopOnError = true,
         } = params as {
-          projectDir: string;
+          projectName: string;
           files: {
             filePath: string;
             content: string;
@@ -62,6 +63,19 @@ describe("Batch Files MCP Tools", () => {
           }[];
           stopOnError?: boolean;
         };
+
+        // In our test, we're only supporting one project
+        if (projectName !== "test-project") {
+          return {
+            isError: true,
+            content: [
+              {
+                type: "text",
+                text: `Error: Invalid or unregistered project: ${projectName}`,
+              },
+            ],
+          };
+        }
 
         const results = [];
         let hasError = false;
@@ -72,7 +86,7 @@ describe("Batch Files MCP Tools", () => {
 
             try {
               // Simple validation - just check that the path is inside the project
-              const resolvedProjectDir = path.resolve(projectDir);
+              const resolvedProjectDir = path.resolve(projectPath);
               const fullPath = path.join(resolvedProjectDir, filePath);
 
               if (!fullPath.startsWith(resolvedProjectDir)) {
@@ -155,9 +169,9 @@ describe("Batch Files MCP Tools", () => {
 
   describe("write_batch_files", () => {
     it("should write multiple files in a single operation", async () => {
-      // Call write_batch_files tool
+      // Call write_batch_files tool with projectName
       const response = await toolRegistration.callTool("write_batch_files", {
-        projectDir: projectPath,
+        projectName: projectName,
         files: [
           {
             filePath: "file1.txt",
@@ -191,7 +205,7 @@ describe("Batch Files MCP Tools", () => {
     it("should stop on first error when stopOnError is true", async () => {
       // Call write_batch_files tool with an invalid path
       const response = await toolRegistration.callTool("write_batch_files", {
-        projectDir: projectPath,
+        projectName: projectName,
         files: [
           {
             filePath: "../outside/file1.txt", // Invalid path outside project
@@ -222,7 +236,7 @@ describe("Batch Files MCP Tools", () => {
     it("should continue processing after error when stopOnError is false", async () => {
       // Call write_batch_files tool with stopOnError = false
       const response = await toolRegistration.callTool("write_batch_files", {
-        projectDir: projectPath,
+        projectName: projectName,
         files: [
           {
             filePath: "../outside/file1.txt", // Invalid path outside project
@@ -266,7 +280,7 @@ describe("Batch Files MCP Tools", () => {
 
       // Call write_batch_files tool with append mode
       const response = await toolRegistration.callTool("write_batch_files", {
-        projectDir: projectPath,
+        projectName: projectName,
         files: [
           {
             filePath,
@@ -289,6 +303,25 @@ describe("Batch Files MCP Tools", () => {
       expect(fs.readFileSync(fullPath, "utf8")).to.equal(
         initialContent + appendContent
       );
+    });
+
+    it("should return error for invalid project name", async () => {
+      // Call write_batch_files tool with invalid project name
+      const response = await toolRegistration.callTool("write_batch_files", {
+        projectName: "non-existent-project",
+        files: [
+          {
+            filePath: "test.txt",
+            content: "This should fail",
+          },
+        ],
+      });
+
+      // Verify error response
+      expect((response as { isError: boolean }).isError).to.equal(true);
+      expect(
+        (response as { content: { text: string }[] }).content[0].text
+      ).to.include("Invalid or unregistered project");
     });
   });
 });

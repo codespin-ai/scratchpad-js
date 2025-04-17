@@ -1,7 +1,10 @@
 // src/mcp/tools/batch.ts
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as zod from "zod";
-import { validateProject, executeInContainer } from "../utils.js";
+import {
+  executeInContainer,
+  validateProjectName
+} from "../utils.js";
 
 export function registerBatchTools(server: McpServer): void {
   server.tool(
@@ -11,23 +14,21 @@ export function registerBatchTools(server: McpServer): void {
       commands: zod
         .array(zod.string())
         .describe("Array of commands to execute in sequence"),
-      projectDir: zod
-        .string()
-        .describe("The absolute path to the project directory"),
+      projectName: zod.string().describe("The name of the project"),
       stopOnError: zod
         .boolean()
         .optional()
         .default(true)
         .describe("Whether to stop execution if a command fails"),
     },
-    async ({ commands, projectDir, stopOnError }) => {
-      if (!validateProject(projectDir)) {
+    async ({ commands, projectName, stopOnError }) => {
+      if (!validateProjectName(projectName)) {
         return {
           isError: true,
           content: [
             {
               type: "text",
-              text: `Error: Invalid or unregistered project directory: ${projectDir}`,
+              text: `Error: Invalid or unregistered project: ${projectName}`,
             },
           ],
         };
@@ -39,7 +40,7 @@ export function registerBatchTools(server: McpServer): void {
       for (const command of commands) {
         try {
           const { stdout, stderr } = await executeInContainer(
-            projectDir,
+            projectName,
             command
           );
           const output = stdout + (stderr ? `\nSTDERR:\n${stderr}` : "");

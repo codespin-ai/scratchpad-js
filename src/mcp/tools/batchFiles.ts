@@ -3,16 +3,18 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as zod from "zod";
 import * as fs from "fs";
 import * as path from "path";
-import { validateProject, validateFilePath } from "../utils.js";
+import {
+  validateProjectName,
+  validateFilePath,
+  getProjectByName,
+} from "../utils.js";
 
 export function registerBatchFileTools(server: McpServer): void {
   server.tool(
     "write_batch_files",
     "Write content to multiple files in a project directory in a single operation",
     {
-      projectDir: zod
-        .string()
-        .describe("The absolute path to the project directory"),
+      projectName: zod.string().describe("The name of the project"),
       files: zod
         .array(
           zod.object({
@@ -33,19 +35,33 @@ export function registerBatchFileTools(server: McpServer): void {
         .default(true)
         .describe("Whether to stop execution if a file write fails"),
     },
-    async ({ projectDir, files, stopOnError }) => {
-      if (!validateProject(projectDir)) {
+    async ({ projectName, files, stopOnError }) => {
+      if (!validateProjectName(projectName)) {
         return {
           isError: true,
           content: [
             {
               type: "text",
-              text: `Error: Invalid or unregistered project directory: ${projectDir}`,
+              text: `Error: Invalid or unregistered project: ${projectName}`,
             },
           ],
         };
       }
 
+      const project = getProjectByName(projectName);
+      if (!project) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Error: Project not found: ${projectName}`,
+            },
+          ],
+        };
+      }
+
+      const projectDir = project.hostPath;
       const results = [];
       let hasError = false;
 

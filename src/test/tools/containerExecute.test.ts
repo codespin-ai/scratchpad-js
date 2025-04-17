@@ -67,6 +67,7 @@ describe("Container Execute Commands", function () {
   let originalHomeDir: unknown;
   let toolRegistration: TestToolRegistration;
   let containerName: string;
+  const projectName = "test-project";
 
   beforeEach(async function () {
     // Skip tests if Docker is not available
@@ -114,7 +115,7 @@ describe("Container Execute Commands", function () {
     createTestConfig(testDir, {
       projects: [
         {
-          name: "test-project",
+          name: projectName,
           hostPath: projectPath,
           containerName: containerName,
         },
@@ -133,42 +134,19 @@ describe("Container Execute Commands", function () {
       "Execute a command in a running container",
       {},
       async (params: unknown) => {
-        const { projectDir, command } = params as {
-          projectDir: string;
+        const { projectName, command } = params as {
+          projectName: string;
           command: string;
         };
 
-        // Validate project directory
-        const normalizedProjectDir = path.normalize(projectDir);
-        const isRegisteredProject =
-          normalizedProjectDir === path.normalize(projectPath);
-
-        if (!isRegisteredProject) {
+        // In our test, we're only supporting one project
+        if (projectName !== "test-project") {
           return {
             isError: true,
             content: [
               {
                 type: "text",
-                text: `Error: Invalid or unregistered project directory: ${projectDir}`,
-              },
-            ],
-          };
-        }
-
-        // Read config to get container name
-        const configPath = path.join(testDir, ".codespin", "codebox.json");
-        const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
-        const projectConfig = config.projects.find(
-          (p: { hostPath: string }) => p.hostPath === projectDir
-        );
-
-        if (!projectConfig || !projectConfig.containerName) {
-          return {
-            isError: true,
-            content: [
-              {
-                type: "text",
-                text: "Error: No container configured for this project",
+                text: `Error: Invalid or unregistered project: ${projectName}`,
               },
             ],
           };
@@ -177,7 +155,7 @@ describe("Container Execute Commands", function () {
         // Execute the command in the container
         try {
           const { stdout, stderr, status } = await executeInContainer(
-            projectConfig.containerName,
+            containerName,
             command
           );
 
@@ -217,46 +195,23 @@ describe("Container Execute Commands", function () {
       {},
       async (params: unknown) => {
         const {
-          projectDir,
+          projectName,
           commands,
           stopOnError = true,
         } = params as {
-          projectDir: string;
+          projectName: string;
           commands: string[];
           stopOnError?: boolean;
         };
 
-        // Validate project directory
-        const normalizedProjectDir = path.normalize(projectDir);
-        const isRegisteredProject =
-          normalizedProjectDir === path.normalize(projectPath);
-
-        if (!isRegisteredProject) {
+        // In our test, we're only supporting one project
+        if (projectName !== "test-project") {
           return {
             isError: true,
             content: [
               {
                 type: "text",
-                text: `Error: Invalid or unregistered project directory: ${projectDir}`,
-              },
-            ],
-          };
-        }
-
-        // Read config to get container name - updated to use hostPath
-        const configPath = path.join(testDir, ".codespin", "codebox.json");
-        const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
-        const projectConfig = config.projects.find(
-          (p: { hostPath: string }) => p.hostPath === projectDir
-        );
-
-        if (!projectConfig || !projectConfig.containerName) {
-          return {
-            isError: true,
-            content: [
-              {
-                type: "text",
-                text: "Error: No container configured for this project",
+                text: `Error: Invalid or unregistered project: ${projectName}`,
               },
             ],
           };
@@ -269,7 +224,7 @@ describe("Container Execute Commands", function () {
         for (const command of commands) {
           try {
             const { stdout, stderr, status } = await executeInContainer(
-              projectConfig.containerName,
+              containerName,
               command
             );
 
@@ -358,7 +313,7 @@ describe("Container Execute Commands", function () {
   it("should execute a simple command in the container", async function () {
     // Execute a simple command to read the test file
     const response = (await toolRegistration.callTool("execute_command", {
-      projectDir: projectPath,
+      projectName: projectName,
       command: `cat ${path.join(projectPath, "test.txt")}`,
     })) as {
       isError: boolean;
@@ -375,7 +330,7 @@ describe("Container Execute Commands", function () {
   it("should handle command errors in the container", async function () {
     // Execute a command that should fail
     const response = (await toolRegistration.callTool("execute_command", {
-      projectDir: projectPath,
+      projectName: projectName,
       command: "cat /nonexistent/file.txt",
     })) as {
       isError: boolean;
@@ -394,7 +349,7 @@ describe("Container Execute Commands", function () {
     const response = (await toolRegistration.callTool(
       "execute_batch_commands",
       {
-        projectDir: projectPath,
+        projectName: projectName,
         commands: [
           "echo 'First command'",
           `echo 'Second command' > ${path.join(projectPath, "output.txt")}`,
@@ -419,7 +374,7 @@ describe("Container Execute Commands", function () {
     const response = (await toolRegistration.callTool(
       "execute_batch_commands",
       {
-        projectDir: projectPath,
+        projectName: projectName,
         commands: [
           "echo 'First command'",
           "cat /nonexistent/file.txt", // This should fail
@@ -441,7 +396,7 @@ describe("Container Execute Commands", function () {
     const response = (await toolRegistration.callTool(
       "execute_batch_commands",
       {
-        projectDir: projectPath,
+        projectName: projectName,
         commands: [
           "echo 'First command'",
           "cat /nonexistent/file.txt", // This should fail
@@ -462,7 +417,7 @@ describe("Container Execute Commands", function () {
     const response = (await toolRegistration.callTool(
       "execute_batch_commands",
       {
-        projectDir: projectPath,
+        projectName: projectName,
         commands: ["export TEST_VAR='container test value'", "echo $TEST_VAR"],
       }
     )) as { isError: boolean; content: { text: string }[] };
@@ -470,5 +425,22 @@ describe("Container Execute Commands", function () {
     // Verify the environment variable was shared between commands
     expect(response.isError).to.equal(false);
     expect(response.content[0].text).to.include("container test value");
+  });
+
+  it("should return error for invalid project name", async function () {
+    // Execute a command with an invalid project name
+    const response = (await toolRegistration.callTool("execute_command", {
+      projectName: "non-existent-project",
+      command: "echo 'This should fail'",
+    })) as {
+      isError: boolean;
+      content: { text: string }[];
+    };
+
+    // Verify the error response
+    expect(response.isError).to.equal(true);
+    expect(response.content[0].text).to.include(
+      "Invalid or unregistered project"
+    );
   });
 });

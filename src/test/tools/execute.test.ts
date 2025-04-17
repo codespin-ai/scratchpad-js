@@ -74,6 +74,7 @@ describe("Execute Commands", function () {
   let originalHomeDir: unknown;
   let toolRegistration: TestToolRegistration;
   const dockerImage = "alpine:latest";
+  const projectName = "test-project";
 
   beforeEach(async function () {
     // Skip tests if Docker is not available
@@ -122,9 +123,15 @@ describe("Execute Commands", function () {
     fs.chmodSync(path.join(projectPath, "script.sh"), 0o755);
     fs.chmodSync(path.join(projectPath, "error.sh"), 0o755);
 
-    // Register project in system config
+    // Register project in system config with new format
     createTestConfig(testDir, {
-      projects: [{ path: projectPath, dockerImage: dockerImage }],
+      projects: [
+        {
+          name: projectName,
+          hostPath: projectPath,
+          dockerImage: dockerImage,
+        },
+      ],
     });
 
     // Set up test tool registration
@@ -134,29 +141,26 @@ describe("Execute Commands", function () {
     toolRegistration.registerTool(
       "execute_command",
       async (params: unknown) => {
-        const { projectDir, command } = params as {
-          projectDir: string;
+        const { projectName, command } = params as {
+          projectName: string;
           command: string;
         };
 
-        // Validate project directory
-        const normalizedProjectDir = path.normalize(projectDir);
-        const isRegisteredProject =
-          normalizedProjectDir === path.normalize(projectPath);
-
-        if (!isRegisteredProject) {
+        // In our test, we're only supporting one project
+        if (projectName !== "test-project") {
           return {
+            isError: true,
             content: [
               {
                 type: "text",
-                text: `Error: Invalid or unregistered project directory: ${projectDir}`,
+                text: `Error: Invalid or unregistered project: ${projectName}`,
               },
             ],
           };
         }
 
         // Execute the command in Docker
-        const result = await executeInDocker(projectDir, command, dockerImage);
+        const result = await executeInDocker(projectPath, command, dockerImage);
 
         // Format the output
         let output = result.stdout;
@@ -174,31 +178,27 @@ describe("Execute Commands", function () {
     );
 
     // Register execute_batch_commands tool
-    // In src/test/tools/execute.test.ts
     toolRegistration.registerTool(
       "execute_batch_commands",
       async (params: unknown) => {
         const {
-          projectDir,
+          projectName,
           commands,
           stopOnError = false,
         } = params as {
-          projectDir: string;
+          projectName: string;
           commands: string[];
           stopOnError?: boolean;
         };
 
-        // Validate project directory
-        const normalizedProjectDir = path.normalize(projectDir);
-        const isRegisteredProject =
-          normalizedProjectDir === path.normalize(projectPath);
-
-        if (!isRegisteredProject) {
+        // In our test, we're only supporting one project
+        if (projectName !== "test-project") {
           return {
+            isError: true,
             content: [
               {
                 type: "text",
-                text: `Error: Invalid or unregistered project directory: ${projectDir}`,
+                text: `Error: Invalid or unregistered project: ${projectName}`,
               },
             ],
           };
@@ -210,7 +210,7 @@ describe("Execute Commands", function () {
         // Execute each command in sequence
         for (const command of commands) {
           const result = await executeInDocker(
-            projectDir,
+            projectPath,
             command,
             dockerImage
           );
@@ -274,7 +274,7 @@ describe("Execute Commands", function () {
   describe("execute_command", function () {
     it("should execute a basic command", async function () {
       const response = (await toolRegistration.callTool("execute_command", {
-        projectDir: projectPath,
+        projectName: projectName,
         command: "cat test.txt",
       })) as { content: { text: string }[]; metadata: { status: number } };
 
@@ -284,7 +284,7 @@ describe("Execute Commands", function () {
 
     it("should handle command errors", async function () {
       const response = (await toolRegistration.callTool("execute_command", {
-        projectDir: projectPath,
+        projectName: projectName,
         command: "cat nonexistent.txt",
       })) as { content: { text: string }[]; metadata: { status: number } };
 
@@ -295,7 +295,7 @@ describe("Execute Commands", function () {
 
     it("should execute scripts with arguments", async function () {
       const response = (await toolRegistration.callTool("execute_command", {
-        projectDir: projectPath,
+        projectName: projectName,
         command: "./script.sh arg1 arg2",
       })) as { content: { text: string }[]; metadata: { status: number } };
 
@@ -304,6 +304,21 @@ describe("Execute Commands", function () {
       expect(response.content[0].text).to.include("Success!");
       expect(response.metadata.status).to.equal(0);
     });
+
+    it("should return error for invalid project name", async function () {
+      const response = (await toolRegistration.callTool("execute_command", {
+        projectName: "non-existent-project",
+        command: "echo 'This should fail'",
+      })) as {
+        isError: boolean;
+        content: { text: string }[];
+      };
+
+      expect(response.isError).to.equal(true);
+      expect(response.content[0].text).to.include(
+        "Invalid or unregistered project"
+      );
+    });
   });
 
   describe("execute_batch_commands", function () {
@@ -311,7 +326,7 @@ describe("Execute Commands", function () {
       const response = (await toolRegistration.callTool(
         "execute_batch_commands",
         {
-          projectDir: projectPath,
+          projectName: projectName,
           commands: ["cat test.txt", "cat test2.txt"],
         }
       )) as {
@@ -328,7 +343,7 @@ describe("Execute Commands", function () {
       const response = (await toolRegistration.callTool(
         "execute_batch_commands",
         {
-          projectDir: projectPath,
+          projectName: projectName,
           commands: ["cat nonexistent.txt", "cat test.txt"],
         }
       )) as {
@@ -346,7 +361,7 @@ describe("Execute Commands", function () {
       const response = (await toolRegistration.callTool(
         "execute_batch_commands",
         {
-          projectDir: projectPath,
+          projectName: projectName,
           commands: ["cat nonexistent.txt", "cat test.txt"],
           stopOnError: true,
         }
@@ -365,13 +380,31 @@ describe("Execute Commands", function () {
       const response = (await toolRegistration.callTool(
         "execute_batch_commands",
         {
-          projectDir: projectPath,
+          projectName: projectName,
           commands: ["VAR=test", "echo $VAR"],
         }
       )) as { content: { text: string }[]; metadata: { hasError: boolean } };
 
       expect(response.content[0].text).to.include("test");
       expect(response.metadata.hasError).to.equal(false);
+    });
+
+    it("should return error for invalid project name", async function () {
+      const response = (await toolRegistration.callTool(
+        "execute_batch_commands",
+        {
+          projectName: "non-existent-project",
+          commands: ["echo 'This should fail'"],
+        }
+      )) as {
+        isError: boolean;
+        content: { text: string }[];
+      };
+
+      expect(response.isError).to.equal(true);
+      expect(response.content[0].text).to.include(
+        "Invalid or unregistered project"
+      );
     });
   });
 });
