@@ -3,16 +3,18 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as zod from "zod";
 import * as fs from "fs";
 import * as path from "path";
-import { validateProject, validateFilePath } from "../utils.js";
+import {
+  validateProjectName,
+  getProjectByName,
+  validateFilePath,
+} from "../utils.js";
 
 export function registerFileTools(server: McpServer): void {
   server.tool(
     "write_file",
     "Write content to a file in a project directory",
     {
-      projectDir: zod
-        .string()
-        .describe("The absolute path to the project directory"),
+      projectName: zod.string().describe("The name of the project"),
       filePath: zod
         .string()
         .describe("Relative path to the file from project root"),
@@ -22,18 +24,33 @@ export function registerFileTools(server: McpServer): void {
         .default("overwrite")
         .describe("Write mode - whether to overwrite or append"),
     },
-    async ({ projectDir, filePath, content, mode }) => {
-      if (!validateProject(projectDir)) {
+    async ({ projectName, filePath, content, mode }) => {
+      if (!validateProjectName(projectName)) {
         return {
           isError: true,
           content: [
             {
               type: "text",
-              text: `Error: Invalid or unregistered project directory: ${projectDir}`,
+              text: `Error: Invalid or unregistered project: ${projectName}`,
             },
           ],
         };
       }
+
+      const project = getProjectByName(projectName);
+      if (!project) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Error: Project not found: ${projectName}`,
+            },
+          ],
+        };
+      }
+
+      const projectDir = project.hostPath;
 
       if (!validateFilePath(projectDir, filePath)) {
         return {
