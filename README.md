@@ -8,22 +8,27 @@ Codebox is a tool for running commands within Docker containers for specific pro
 npm install -g @codespin/codebox
 ```
 
-## Features
-
-- Register projects with Docker images or running containers
-- Execute commands in project-specific containers
-- Write files to projects with proper permissions
-- Batch command execution
-- Integration with AI assistants via Model Context Protocol (MCP)
-
 ## Usage
 
-### Starting the MCP Server
+### Configure your MCP Client (such as LibreChat, Claude Desktop)
 
-Start the MCP server to enable AI assistants to interact with Codebox:
+This is how you start the tool. Configure your MCP Client accordingly.
 
 ```bash
 codebox start
+```
+
+For LibreChat, it'll be:
+
+```yaml
+mcpServers:
+  codebox:
+      type: stdio
+      command: codebox
+      args:
+        - start
+      timeout: 30000             # 30 second timeout for commands
+      initTimeout: 10000         # 10 second timeout for initialization
 ```
 
 ### Managing Projects
