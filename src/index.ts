@@ -64,7 +64,7 @@ export async function main() {
                 .option("containerPath", {
                   type: "string",
                   describe:
-                    "Path inside the container to mount the project (defaults to /app)",
+                    "Path inside the container to mount the project (defaults to /workspace)",
                 })
                 .check((argv) => {
                   if (!argv.image && !argv.container) {
