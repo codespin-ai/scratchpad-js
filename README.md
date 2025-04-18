@@ -47,8 +47,8 @@ codebox project add /path/to/project --image python:3.9
 # Register with a custom name
 codebox project add /path/to/project --image node:18 --name my-node-app
 
-# Specify a custom path inside the container (default is /app)
-codebox project add --image node:18 --containerPath /workspace
+# Specify a custom path inside the container (default is /workspace)
+codebox project add --image node:18 --containerPath /my-project
 
 # Use a running container instead of a new container
 codebox project add --container my-running-container
@@ -95,7 +95,7 @@ Projects are stored in `~/.codespin/codebox.json` with the following structure:
     {
       "name": "my-node-app",
       "hostPath": "/home/user/projects/my-node-app",
-      "containerPath": "/app",
+      "containerPath": "/my-project",
       "dockerImage": "node:18"
     },
     {
@@ -112,7 +112,7 @@ Each project has:
 
 - `name`: Identifier for the project
 - `hostPath`: Path on the host machine
-- `containerPath`: (Optional) Path in the container where the project is mounted (defaults to `/app`)
+- `containerPath`: (Optional) Path in the container where the project is mounted (defaults to `/workspace`)
 - `dockerImage`: Docker image to use for new containers
 - `containerName`: Name of an existing running container
 

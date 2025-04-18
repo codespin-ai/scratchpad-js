@@ -160,7 +160,7 @@ export async function executeInContainer(
 
       // Execute command in the running container with the user's UID/GID
       const dockerCommand = `docker exec -i --user=${uid}:${gid} --workdir="${
-        project.containerPath ?? "/app"
+        project.containerPath ?? "/workspace"
       }" ${project.containerName} /bin/sh -c "${command}"`;
       return await execAsync(dockerCommand, {
         maxBuffer: 10 * 1024 * 1024, // 10MB buffer
@@ -168,7 +168,7 @@ export async function executeInContainer(
     } else if (dockerImage || project.dockerImage) {
       // Use regular Docker container with image
       const imageToUse = dockerImage || project.dockerImage;
-      const containerPath = project.containerPath || "/app";
+      const containerPath = project.containerPath || "/workspace";
 
       if (!imageToUse) {
         throw new Error("No Docker image configured for this project");
