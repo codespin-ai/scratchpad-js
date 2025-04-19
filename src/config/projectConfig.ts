@@ -4,11 +4,29 @@ import * as path from "path";
 import * as os from "os";
 import { SystemConfig, ProjectConfig } from "./types.js";
 
+// Configurable base path for testing
+let configBasePath = os.homedir();
+
+/**
+ * Set a custom base path for configuration
+ * Used primarily for testing
+ */
+export function setConfigBasePath(path: string): void {
+  configBasePath = path;
+}
+
+/**
+ * Get the current base path for configuration
+ */
+export function getConfigBasePath(): string {
+  return configBasePath;
+}
+
 /**
  * Get the path to the config file
  */
 export function getConfigFilePath(): string {
-  const configDir = path.join(os.homedir(), ".codespin");
+  const configDir = path.join(configBasePath, ".codespin");
   if (!fs.existsSync(configDir)) {
     fs.mkdirSync(configDir, { recursive: true });
   }
@@ -76,7 +94,9 @@ export function validateProjectName(projectName: string): boolean {
 /**
  * Find a project that contains the given directory
  */
-export function getProjectForDirectory(projectDir: string): ProjectConfig | null {
+export function getProjectForDirectory(
+  projectDir: string
+): ProjectConfig | null {
   const resolvedPath = path.resolve(projectDir);
   const projects = getProjects();
 
@@ -99,7 +119,7 @@ export function getProjectForDirectory(projectDir: string): ProjectConfig | null
  */
 export function validateProject(projectDir: string): boolean {
   const resolvedPath = path.resolve(projectDir);
-  
+
   // Ensure path exists and is a directory
   if (
     !fs.existsSync(resolvedPath) ||

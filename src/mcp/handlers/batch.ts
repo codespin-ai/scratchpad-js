@@ -36,7 +36,6 @@ export function registerBatchHandlers(server: McpServer): void {
       }
 
       const results = [];
-      let hasError = false;
 
       for (const command of commands) {
         try {
@@ -53,7 +52,6 @@ export function registerBatchHandlers(server: McpServer): void {
             success: true,
           });
         } catch (error) {
-          hasError = true;
           results.push({
             command,
             output: error instanceof Error ? error.message : "Unknown error",
@@ -80,7 +78,6 @@ export function registerBatchHandlers(server: McpServer): void {
         .join("\n");
 
       return {
-        isError: hasError && stopOnError,
         content: [
           {
             type: "text",

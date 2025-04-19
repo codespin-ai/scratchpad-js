@@ -1,22 +1,21 @@
 // src/logging/logger.ts
 import * as fs from "fs";
 import * as path from "path";
-import * as os from "os";
 import { v4 as uuidv4 } from "uuid";
-import { isDebugEnabled } from "../config/projectConfig.js";
+import { getConfigBasePath, isDebugEnabled } from "../config/projectConfig.js";
 
 type InvokeMode = "cli" | "api" | "test";
 
 let currentInvokeMode: InvokeMode = "cli";
 
-// Get the home directory - this will be mocked in tests
-function getHomeDir(): string {
-  return os.homedir();
+// Get the base directory for logs (using the configurable base path)
+function getBaseDir(): string {
+  return getConfigBasePath();
 }
 
 // Create the necessary directory structure
 function ensureLogDirectories() {
-  const logDir = path.join(getHomeDir(), ".codespin", "logs");
+  const logDir = path.join(getBaseDir(), ".codespin", "logs");
   const requestsDir = path.join(logDir, "requests");
 
   if (!fs.existsSync(logDir)) {
@@ -112,6 +111,6 @@ export function logMcpCall({
 }
 
 // Used for testing - allows for mocking the home directory
-export function _setHomeDir(fn: () => string) {
-  (getHomeDir as unknown) = fn;
+export function _setBaseDir(fn: () => string) {
+  (getBaseDir as unknown) = fn;
 }

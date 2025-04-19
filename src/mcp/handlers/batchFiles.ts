@@ -1,8 +1,12 @@
 // src/mcp/handlers/batchFiles.ts
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as zod from "zod";
-import { validateProjectName, getProjectByName } from "../../config/projectConfig.js";
+import {
+  validateProjectName,
+  getProjectByName,
+} from "../../config/projectConfig.js";
 import { writeProjectFile } from "../../fs/fileIO.js";
+import { validateFilePath } from "../../fs/pathValidation.js";
 
 /**
  * Register batch file operation handlers with the MCP server
@@ -34,6 +38,7 @@ export function registerBatchFileHandlers(server: McpServer): void {
         .describe("Whether to stop execution if a file write fails"),
     },
     async ({ projectName, files, stopOnError }) => {
+      // Validate project first
       if (!validateProjectName(projectName)) {
         return {
           isError: true,
@@ -63,7 +68,39 @@ export function registerBatchFileHandlers(server: McpServer): void {
       const results = [];
       let hasError = false;
 
+      // First, validate all file paths before performing any writes
+      // This prevents partial writes when some paths are valid and others aren't
+      const validatedFiles = [];
       for (const fileOp of files) {
+        const { filePath } = fileOp;
+
+        if (!validateFilePath(projectDir, filePath)) {
+          hasError = true;
+          results.push({
+            filePath,
+            success: false,
+            message: `Invalid file path: ${filePath} - path traversal attempt detected`,
+          });
+
+          if (stopOnError) {
+            // Return early with error
+            return {
+              isError: true,
+              content: [
+                {
+                  type: "text",
+                  text: formatResults(results),
+                },
+              ],
+            };
+          }
+        } else {
+          validatedFiles.push(fileOp);
+        }
+      }
+
+      // Only proceed with writing validated files
+      for (const fileOp of validatedFiles) {
         const { filePath, content, mode = "overwrite" } = fileOp;
 
         try {
@@ -93,16 +130,7 @@ export function registerBatchFileHandlers(server: McpServer): void {
       }
 
       // Format the results
-      const formattedResults = results
-        .map((result) => {
-          return (
-            `File: ${result.filePath}\n` +
-            `Status: ${result.success ? "Success" : "Failed"}\n` +
-            `Message: ${result.message}\n` +
-            "----------------------------------------\n"
-          );
-        })
-        .join("\n");
+      const formattedResults = formatResults(results);
 
       return {
         isError: hasError && stopOnError,
@@ -115,4 +143,26 @@ export function registerBatchFileHandlers(server: McpServer): void {
       };
     }
   );
+}
+
+/**
+ * Format batch operation results for output
+ */
+function formatResults(
+  results: Array<{
+    filePath: string;
+    success: boolean;
+    message: string;
+  }>
+): string {
+  return results
+    .map((result) => {
+      return (
+        `File: ${result.filePath}\n` +
+        `Status: ${result.success ? "Success" : "Failed"}\n` +
+        `Message: ${result.message}\n` +
+        "----------------------------------------\n"
+      );
+    })
+    .join("\n");
 }

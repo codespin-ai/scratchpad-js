@@ -1,4 +1,3 @@
-// src/fs/pathValidation.ts
 import * as path from "path";
 import * as fs from "fs";
 
@@ -25,11 +24,28 @@ export function validateFilePath(
   projectDir: string,
   filePath: string
 ): boolean {
+  // Get absolute path of project directory
   const resolvedProjectDir = path.resolve(projectDir);
-  const fullPath = path.join(resolvedProjectDir, filePath);
 
-  // Ensure the resulting path is still within the project directory
-  return fullPath.startsWith(resolvedProjectDir);
+  try {
+    // Immediately reject absolute paths
+    if (path.isAbsolute(filePath)) {
+      return false;
+    }
+
+    // Resolve the normalized absolute path of the combined path
+    // This properly handles ../ paths
+    const fullPath = path.resolve(resolvedProjectDir, filePath);
+
+    // Check if the normalized path starts with the project directory
+    return (
+      fullPath === resolvedProjectDir ||
+      fullPath.startsWith(resolvedProjectDir + path.sep)
+    );
+  } catch (error) {
+    // Any path resolution errors are treated as security issues
+    return false;
+  }
 }
 
 /**

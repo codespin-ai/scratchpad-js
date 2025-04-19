@@ -1,73 +1,36 @@
 #!/bin/bash
 
-# Delete old test directory if it exists
-if [ -d "./src/test" ]; then
-  # Preserve test utilities
-  mkdir -p ./tmp_test_utils
-  if [ -f "./src/test/setup.ts" ]; then
-    cp ./src/test/setup.ts ./tmp_test_utils/
-  fi
-  if [ -f "./src/test/mockUtils.ts" ]; then
-    cp ./src/test/mockUtils.ts ./tmp_test_utils/
-  fi
-  if [ -f "./src/test/mcpTestUtil.ts" ]; then
-    cp ./src/test/mcpTestUtil.ts ./tmp_test_utils/
-  fi
-  if [ -f "./src/test/osWrapper.ts" ]; then
-    cp ./src/test/osWrapper.ts ./tmp_test_utils/
-  fi
+# Create test directory structure
+echo "Creating test directory structure..."
 
-  # Remove old test directory
-  rm -rf ./src/test
-  echo "Deleted old test directory"
-fi
+# Create main test directories
+mkdir -p ./src/test/integration/config
+mkdir -p ./src/test/integration/fs
+mkdir -p ./src/test/integration/docker
+mkdir -p ./src/test/integration/mcp/handlers
 
-# Create new test directory structure
-mkdir -p ./src/test/cli/commands
-mkdir -p ./src/test/config
-mkdir -p ./src/test/docker
-mkdir -p ./src/test/fs
-mkdir -p ./src/test/mcp/handlers
-mkdir -p ./src/test/logging
-mkdir -p ./src/test/utils
+# Create integration test setup
+touch ./src/test/integration/setup.ts
+touch ./src/test/integration/testUtils.ts
 
-# Create empty test files
-touch ./src/test/cli/commands/project.test.ts
-touch ./src/test/cli/commands/start.test.ts
-touch ./src/test/cli/index.test.ts
+# Create config tests
+touch ./src/test/integration/config/projectConfig.test.ts
 
-touch ./src/test/config/projectConfig.test.ts
+# Create filesystem tests
+touch ./src/test/integration/fs/fileIO.test.ts
+touch ./src/test/integration/fs/pathValidation.test.ts
 
-touch ./src/test/docker/execution.test.ts
+# Create docker tests
+touch ./src/test/integration/docker/execution.test.ts
 
-touch ./src/test/fs/fileIO.test.ts
-touch ./src/test/fs/pathValidation.test.ts
+# Create MCP server tests
+touch ./src/test/integration/mcp/server.test.ts
 
-touch ./src/test/mcp/handlers/batch.test.ts
-touch ./src/test/mcp/handlers/batchFiles.test.ts
-touch ./src/test/mcp/handlers/execute.test.ts
-touch ./src/test/mcp/handlers/files.test.ts
-touch ./src/test/mcp/handlers/projects.test.ts
-touch ./src/test/mcp/logging.test.ts
-touch ./src/test/mcp/server.test.ts
+# Create MCP handler tests
+touch ./src/test/integration/mcp/handlers/files.test.ts
+touch ./src/test/integration/mcp/handlers/projects.test.ts
+touch ./src/test/integration/mcp/handlers/execute.test.ts
+touch ./src/test/integration/mcp/handlers/batch.test.ts
+touch ./src/test/integration/mcp/handlers/batchFiles.test.ts
 
-touch ./src/test/logging/logger.test.ts
-
-# Restore test utilities
-if [ -d "./tmp_test_utils" ]; then
-  if [ -f "./tmp_test_utils/setup.ts" ]; then
-    cp ./tmp_test_utils/setup.ts ./src/test/utils/
-  fi
-  if [ -f "./tmp_test_utils/mockUtils.ts" ]; then
-    cp ./tmp_test_utils/mockUtils.ts ./src/test/utils/
-  fi
-  if [ -f "./tmp_test_utils/mcpTestUtil.ts" ]; then
-    cp ./tmp_test_utils/mcpTestUtil.ts ./src/test/utils/
-  fi
-  if [ -f "./tmp_test_utils/osWrapper.ts" ]; then
-    cp ./tmp_test_utils/osWrapper.ts ./src/test/utils/
-  fi
-  rm -rf ./tmp_test_utils
-fi
-
-echo "Created new test directory structure"
+echo "Test file structure created successfully!"

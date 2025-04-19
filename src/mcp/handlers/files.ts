@@ -1,9 +1,12 @@
 // src/mcp/handlers/files.ts
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as zod from "zod";
-import { getProjectByName, validateProjectName } from "../../config/projectConfig.js";
+import {
+  getProjectByName,
+  validateProjectName,
+} from "../../config/projectConfig.js";
 import { writeProjectFile } from "../../fs/fileIO.js";
-import { validateFilePath } from "../../fs/pathValidation.js"; // Fixed import
+import { validateFilePath } from "../../fs/pathValidation.js";
 
 /**
  * Register file operation handlers with the MCP server
@@ -24,6 +27,7 @@ export function registerFileHandlers(server: McpServer): void {
         .describe("Write mode - whether to overwrite or append"),
     },
     async ({ projectName, filePath, content, mode }) => {
+      // Validate project first
       if (!validateProjectName(projectName)) {
         return {
           isError: true,
@@ -49,8 +53,21 @@ export function registerFileHandlers(server: McpServer): void {
         };
       }
 
+      // Pre-validate the file path before attempting any operations
+      if (!validateFilePath(project.hostPath, filePath)) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Error: Invalid file path: ${filePath} - path traversal attempt detected`,
+            },
+          ],
+        };
+      }
+
       try {
-        // Write file to the project directory
+        // Write file to the project directory (which will perform validation again)
         writeProjectFile(project.hostPath, filePath, content, mode);
 
         return {
