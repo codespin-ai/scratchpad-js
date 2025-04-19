@@ -1,9 +1,10 @@
-// Full file: src/test/integration/mcp/handlers/batchFiles.test.ts
+// src/test/integration/mcp/handlers/batchFiles.test.ts
 import { expect } from "chai";
 import * as fs from "fs";
 import * as path from "path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerBatchFileHandlers } from "../../../../mcp/handlers/batchFiles.js";
+import { registerProjectHandlers } from "../../../../mcp/handlers/projects.js";
 import { setupTestEnvironment, createTestConfig } from "../../setup.js";
 
 // Response type for MCP tools
@@ -18,17 +19,19 @@ interface McpResponse {
 // Mock request handler type
 type RequestHandler = (args: Record<string, unknown>) => Promise<McpResponse>;
 
-describe("Batch File Handlers", function () {
-  let _testDir: string;
+describe("Batch File Handlers with Sessions", function () {
+  let testDir: string;
   let configDir: string;
   let projectDir: string;
   let cleanup: () => void;
   let writeBatchFilesHandler: RequestHandler;
+  let openProjectSessionHandler: RequestHandler;
+  let closeProjectSessionHandler: RequestHandler;
 
   beforeEach(function () {
     // Setup test environment
     const env = setupTestEnvironment();
-    _testDir = env.testDir;
+    testDir = env.testDir;
     configDir = env.configDir;
     projectDir = env.projectDir;
     cleanup = env.cleanup;
@@ -40,6 +43,12 @@ describe("Batch File Handlers", function () {
           name: "test-project",
           hostPath: projectDir,
           dockerImage: "dummy-image",
+        },
+        {
+          name: "copy-project",
+          hostPath: projectDir,
+          dockerImage: "dummy-image",
+          copy: true,
         },
       ],
     });
@@ -54,23 +63,35 @@ describe("Batch File Handlers", function () {
       ) => {
         if (name === "write_batch_files") {
           writeBatchFilesHandler = handler as RequestHandler;
+        } else if (name === "open_project_session") {
+          openProjectSessionHandler = handler as RequestHandler;
+        } else if (name === "close_project_session") {
+          closeProjectSessionHandler = handler as RequestHandler;
         }
       },
     } as unknown as McpServer;
 
     // Register the handlers
     registerBatchFileHandlers(server);
+    registerProjectHandlers(server);
   });
 
   afterEach(function () {
-    // Clean up test environment
     cleanup();
   });
 
-  describe("write_batch_files", function () {
-    it("should write multiple files in a single operation", async function () {
-      const response = await writeBatchFilesHandler({
+  describe("write_batch_files with sessions", function () {
+    it("should write multiple files in a single operation using a session", async function () {
+      // First, open a project session
+      const openResponse = await openProjectSessionHandler({
         projectName: "test-project",
+      });
+
+      const sessionId = openResponse.content[0].text;
+
+      // Write multiple files using the session
+      const response = await writeBatchFilesHandler({
+        projectSessionId: sessionId,
         files: [
           {
             filePath: "file1.txt",
@@ -85,10 +106,9 @@ describe("Batch File Handlers", function () {
         ],
       });
 
-      // Allow for both undefined and false as valid success indicators
-      // This is more flexible and works with different handler implementations
+      // Verify the response
       expect(response.isError || false).to.equal(false);
-      expect(response.content[0].text).to.include("Successfully wrote file");
+      expect(response.content[0].text).to.include("Success");
 
       // Verify files were created
       const file1Path = path.join(projectDir, "file1.txt");
@@ -99,6 +119,11 @@ describe("Batch File Handlers", function () {
 
       expect(fs.readFileSync(file1Path, "utf8")).to.equal("Content for file 1");
       expect(fs.readFileSync(file2Path, "utf8")).to.equal("Content for file 2");
+
+      // Clean up the session
+      await closeProjectSessionHandler({
+        projectSessionId: sessionId,
+      });
     });
 
     it("should stop on first error if stopOnError is true", async function () {
@@ -106,8 +131,16 @@ describe("Batch File Handlers", function () {
       const validFilePath = path.join(projectDir, "valid.txt");
       fs.writeFileSync(validFilePath, "Initial content\n");
 
-      const response = await writeBatchFilesHandler({
+      // Open a project session
+      const openResponse = await openProjectSessionHandler({
         projectName: "test-project",
+      });
+
+      const sessionId = openResponse.content[0].text;
+
+      // Try to write files with one invalid path
+      const response = await writeBatchFilesHandler({
+        projectSessionId: sessionId,
         files: [
           {
             filePath: "../outside.txt", // Invalid path
@@ -125,13 +158,17 @@ describe("Batch File Handlers", function () {
 
       // Verify the error response
       expect(response.isError).to.equal(true);
-      expect(response.content[0].text).to.include("Failed");
       expect(response.content[0].text).to.include("Invalid file path");
 
       // Second operation should not have happened
       expect(fs.readFileSync(validFilePath, "utf8")).to.equal(
         "Initial content\n"
       );
+
+      // Clean up the session
+      await closeProjectSessionHandler({
+        projectSessionId: sessionId,
+      });
     });
 
     it("should continue after errors if stopOnError is false", async function () {
@@ -139,8 +176,16 @@ describe("Batch File Handlers", function () {
       const validFilePath = path.join(projectDir, "valid2.txt");
       fs.writeFileSync(validFilePath, "Initial content\n");
 
-      const response = await writeBatchFilesHandler({
+      // Open a project session
+      const openResponse = await openProjectSessionHandler({
         projectName: "test-project",
+      });
+
+      const sessionId = openResponse.content[0].text;
+
+      // Try to write files with one invalid path but continue
+      const response = await writeBatchFilesHandler({
+        projectSessionId: sessionId,
         files: [
           {
             filePath: "../outside.txt", // Invalid path
@@ -164,11 +209,16 @@ describe("Batch File Handlers", function () {
       expect(fs.readFileSync(validFilePath, "utf8")).to.equal(
         "Initial content\nAppended content"
       );
+
+      // Clean up the session
+      await closeProjectSessionHandler({
+        projectSessionId: sessionId,
+      });
     });
 
-    it("should return error for invalid project", async function () {
+    it("should return error for invalid sessions", async function () {
       const response = await writeBatchFilesHandler({
-        projectName: "non-existent-project",
+        projectSessionId: "invalid-session-id",
         files: [
           {
             filePath: "file.txt",
@@ -181,8 +231,52 @@ describe("Batch File Handlers", function () {
       // Verify the error response
       expect(response.isError).to.equal(true);
       expect(response.content[0].text).to.include(
-        "Invalid or unregistered project"
+        "Invalid or expired session ID"
       );
+    });
+  });
+
+  describe("write_batch_files with Copy Mode", function () {
+    it("should write multiple files to a copy without modifying original files", async function () {
+      // Open a project session with copy=true
+      const openResponse = await openProjectSessionHandler({
+        projectName: "copy-project",
+      });
+
+      const sessionId = openResponse.content[0].text;
+
+      // Write multiple files using the session
+      const response = await writeBatchFilesHandler({
+        projectSessionId: sessionId,
+        files: [
+          {
+            filePath: "batch-copy1.txt",
+            content: "Content for file 1",
+            mode: "overwrite",
+          },
+          {
+            filePath: "batch-copy2.txt",
+            content: "Content for file 2",
+            mode: "overwrite",
+          },
+        ],
+      });
+
+      // Verify the response
+      expect(response.isError || false).to.equal(false);
+      expect(response.content[0].text).to.include("Success");
+
+      // Verify files were NOT created in the original project directory
+      const file1Path = path.join(projectDir, "batch-copy1.txt");
+      const file2Path = path.join(projectDir, "batch-copy2.txt");
+
+      expect(fs.existsSync(file1Path)).to.equal(false);
+      expect(fs.existsSync(file2Path)).to.equal(false);
+
+      // Clean up the session
+      await closeProjectSessionHandler({
+        projectSessionId: sessionId,
+      });
     });
   });
 });

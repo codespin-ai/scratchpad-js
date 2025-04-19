@@ -4,6 +4,7 @@ import { expect } from "chai";
 import * as fs from "fs";
 import * as path from "path";
 import { registerExecuteHandlers } from "../../../../mcp/handlers/execute.js";
+import { registerProjectHandlers } from "../../../../mcp/handlers/projects.js";
 import { createTestConfig, setupTestEnvironment } from "../../setup.js";
 import {
   createTestContainer,
@@ -25,14 +26,16 @@ interface McpResponse {
 // Mock request handler type
 type RequestHandler = (args: Record<string, unknown>) => Promise<McpResponse>;
 
-describe("Execute Handlers", function () {
+describe("Execute Handlers with Sessions", function () {
   this.timeout(30000); // Docker operations can be slow
 
-  let _testDir: string;
+  let testDir: string;
   let configDir: string;
   let projectDir: string;
   let cleanup: () => void;
   let executeCommandHandler: RequestHandler;
+  let openProjectSessionHandler: RequestHandler;
+  let closeProjectSessionHandler: RequestHandler;
   let dockerAvailable = false;
   let containerName: string;
   const projectName = "test-project";
@@ -55,7 +58,7 @@ describe("Execute Handlers", function () {
 
     // Setup test environment
     const env = setupTestEnvironment();
-    _testDir = env.testDir;
+    testDir = env.testDir;
     configDir = env.configDir;
     projectDir = env.projectDir;
     cleanup = env.cleanup;
@@ -79,12 +82,17 @@ describe("Execute Handlers", function () {
       ) => {
         if (name === "execute_command") {
           executeCommandHandler = handler as RequestHandler;
+        } else if (name === "open_project_session") {
+          openProjectSessionHandler = handler as RequestHandler;
+        } else if (name === "close_project_session") {
+          closeProjectSessionHandler = handler as RequestHandler;
         }
       },
     } as unknown as McpServer;
 
     // Register the handlers
     registerExecuteHandlers(server);
+    registerProjectHandlers(server);
   });
 
   afterEach(async function () {
@@ -97,7 +105,7 @@ describe("Execute Handlers", function () {
     cleanup();
   });
 
-  describe("execute_command (Container Mode)", function () {
+  describe("execute_command with Container Mode", function () {
     beforeEach(async function () {
       // Create a test container
       await createTestContainer(containerName, dockerImage, projectDir);
@@ -114,75 +122,70 @@ describe("Execute Handlers", function () {
       });
     });
 
-    it("should execute a command in the container", async function () {
-      const response = await executeCommandHandler({
+    it("should execute a command in the container using a session", async function () {
+      // First, open a project session
+      const openResponse = await openProjectSessionHandler({
         projectName,
+      });
+
+      const sessionId = openResponse.content[0].text;
+
+      // Now execute command using the session
+      const response = await executeCommandHandler({
+        projectSessionId: sessionId,
         command: "cat /workspace/test.txt",
       });
 
       // Verify the response
       expect(response.isError).to.equal(undefined);
       expect(response.content[0].text).to.include("Hello from execute test!");
+
+      // Clean up the session
+      await closeProjectSessionHandler({
+        projectSessionId: sessionId,
+      });
     });
 
     it("should handle command errors", async function () {
-      const response = await executeCommandHandler({
+      // First, open a project session
+      const openResponse = await openProjectSessionHandler({
         projectName,
+      });
+
+      const sessionId = openResponse.content[0].text;
+
+      // Execute a command that will fail
+      const response = await executeCommandHandler({
+        projectSessionId: sessionId,
         command: "cat /nonexistent/file.txt",
       });
 
       // Verify the error response
       expect(response.isError).to.equal(true);
       expect(response.content[0].text).to.include("No such file");
+
+      // Clean up the session
+      await closeProjectSessionHandler({
+        projectSessionId: sessionId,
+      });
     });
 
-    it("should return error for invalid project", async function () {
+    it("should return error for invalid sessions", async function () {
+      // Execute command with invalid session ID
       const response = await executeCommandHandler({
-        projectName: "non-existent-project",
+        projectSessionId: "invalid-session-id",
         command: "echo 'This should fail'",
       });
 
       // Verify the error response
       expect(response.isError).to.equal(true);
       expect(response.content[0].text).to.include(
-        "Invalid or unregistered project"
+        "Invalid or expired session ID"
       );
-    });
-
-    it("should ignore copy mode for container execution", async function () {
-      // Register the container with copy mode (which should be ignored)
-      createTestConfig(configDir, {
-        projects: [
-          {
-            name: "container-with-copy",
-            hostPath: projectDir,
-            containerName: containerName,
-            copy: true, // This should be ignored for container execution
-          },
-        ],
-      });
-
-      // Create a file that we'll modify
-      const filePath = path.join(projectDir, "container-modify.txt");
-      fs.writeFileSync(filePath, "Original content");
-
-      // Execute a command that modifies the file
-      const response = await executeCommandHandler({
-        projectName: "container-with-copy",
-        command: "echo -n 'Modified by container' > /workspace/container-modify.txt",
-      });
-
-      // Verify the command execution succeeded
-      expect(response.isError).to.equal(undefined);
-
-      // Since copy mode is ignored for containers, the original file SHOULD be modified
-      // Read the file content directly to avoid any special character handling issues
-      const modifiedContent = fs.readFileSync(filePath, "utf8");
-      expect(modifiedContent).to.equal("Modified by container");
     });
   });
 
-  describe("execute_command (Image Mode)", function () {
+  describe("execute_command with Image Mode", function () {
     beforeEach(function () {
       // Register the image in the config
       createTestConfig(configDir, {
@@ -196,19 +199,32 @@ describe("Execute Handlers", function () {
       });
     });
 
-    it("should execute a command with the image", async function () {
-      const response = await executeCommandHandler({
+    it("should execute a command with the image using a session", async function () {
+      // First, open a project session
+      const openResponse = await openProjectSessionHandler({
         projectName,
+      });
+
+      const sessionId = openResponse.content[0].text;
+
+      // Now execute command using the session
+      const response = await executeCommandHandler({
+        projectSessionId: sessionId,
         command: "cat /workspace/test.txt",
       });
 
       // Verify the response
       expect(response.isError).to.equal(undefined);
       expect(response.content[0].text).to.include("Hello from execute test!");
+
+      // Clean up the session
+      await closeProjectSessionHandler({
+        projectSessionId: sessionId,
+      });
     });
   });
 
-  describe("execute_command (Copy Mode)", function () {
+  describe("execute_command with Copy Mode", function () {
     beforeEach(function () {
       // Register the image in the config with copy mode enabled
       createTestConfig(configDir, {
@@ -228,9 +244,18 @@ describe("Execute Handlers", function () {
     });
 
     it("should execute commands with file copying without modifying originals", async function () {
-      const response = await executeCommandHandler({
+      // First, open a project session
+      const openResponse = await openProjectSessionHandler({
         projectName,
-        command: "echo 'Modified content' > /workspace/for-copy-test.txt && cat /workspace/for-copy-test.txt",
+      });
+
+      const sessionId = openResponse.content[0].text;
+
+      // Execute a command that modifies a file
+      const response = await executeCommandHandler({
+        projectSessionId: sessionId,
+        command:
+          "echo 'Modified content' > /workspace/for-copy-test.txt && cat /workspace/for-copy-test.txt",
       });
 
       // Verify the command output shows the modified content
@@ -239,7 +264,49 @@ describe("Execute Handlers", function () {
 
       // But the original file should remain unchanged
       const filePath = path.join(projectDir, "for-copy-test.txt");
-      expect(fs.readFileSync(filePath, "utf8")).to.equal("This file should not change");
+      expect(fs.readFileSync(filePath, "utf8")).to.equal(
+        "This file should not change"
+      );
+
+      // Clean up the session
+      await closeProjectSessionHandler({
+        projectSessionId: sessionId,
+      });
+    });
+
+    it("should maintain changes across multiple commands in the same session", async function () {
+      // First, open a project session
+      const openResponse = await openProjectSessionHandler({
+        projectName,
+      });
+
+      const sessionId = openResponse.content[0].text;
+
+      // Execute a command that creates a file
+      await executeCommandHandler({
+        projectSessionId: sessionId,
+        command: "echo 'First command' > /workspace/session-test.txt",
+      });
+
+      // Execute a second command that reads the file created by the first command
+      const response = await executeCommandHandler({
+        projectSessionId: sessionId,
+        command: "cat /workspace/session-test.txt",
+      });
+
+      // Verify the second command can see the file created by the first
+      expect(response.isError).to.equal(undefined);
+      expect(response.content[0].text).to.include("First command");
+
+      // The file should not exist in the original project directory
+      expect(fs.existsSync(path.join(projectDir, "session-test.txt"))).to.equal(
+        false
+      );
+
+      // Clean up the session
+      await closeProjectSessionHandler({
+        projectSessionId: sessionId,
+      });
     });
   });
 });

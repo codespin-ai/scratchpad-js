@@ -1,9 +1,10 @@
-// Full file: src/test/integration/mcp/handlers/batch.test.ts
+// src/test/integration/mcp/handlers/batch.test.ts
 import { expect } from "chai";
 import * as fs from "fs";
 import * as path from "path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerBatchHandlers } from "../../../../mcp/handlers/batch.js";
+import { registerProjectHandlers } from "../../../../mcp/handlers/projects.js";
 import { setupTestEnvironment, createTestConfig } from "../../setup.js";
 import {
   isDockerAvailable,
@@ -25,14 +26,16 @@ interface McpResponse {
 // Mock request handler type
 type RequestHandler = (args: Record<string, unknown>) => Promise<McpResponse>;
 
-describe("Batch Command Handlers", function () {
+describe("Batch Command Handlers with Sessions", function () {
   this.timeout(30000); // Docker operations can be slow
 
-  let _testDir: string;
+  let testDir: string;
   let configDir: string;
   let projectDir: string;
   let cleanup: () => void;
   let executeBatchCommandsHandler: RequestHandler;
+  let openProjectSessionHandler: RequestHandler;
+  let closeProjectSessionHandler: RequestHandler;
   let dockerAvailable = false;
   let containerName: string;
   const projectName = "test-project";
@@ -55,7 +58,7 @@ describe("Batch Command Handlers", function () {
 
     // Setup test environment
     const env = setupTestEnvironment();
-    _testDir = env.testDir;
+    testDir = env.testDir;
     configDir = env.configDir;
     projectDir = env.projectDir;
     cleanup = env.cleanup;
@@ -76,12 +79,17 @@ describe("Batch Command Handlers", function () {
       ) => {
         if (name === "execute_batch_commands") {
           executeBatchCommandsHandler = handler as RequestHandler;
+        } else if (name === "open_project_session") {
+          openProjectSessionHandler = handler as RequestHandler;
+        } else if (name === "close_project_session") {
+          closeProjectSessionHandler = handler as RequestHandler;
         }
       },
     } as unknown as McpServer;
 
     // Register the handlers
     registerBatchHandlers(server);
+    registerProjectHandlers(server);
   });
 
   afterEach(async function () {
@@ -94,7 +102,7 @@ describe("Batch Command Handlers", function () {
     cleanup();
   });
 
-  describe("execute_batch_commands", function () {
+  describe("execute_batch_commands with sessions", function () {
     beforeEach(async function () {
       // Create a test container
       await createTestContainer(containerName, dockerImage, projectDir);
@@ -111,9 +119,17 @@ describe("Batch Command Handlers", function () {
       });
     });
 
-    it("should execute a batch of commands in sequence", async function () {
-      const response = await executeBatchCommandsHandler({
+    it("should execute a batch of commands in sequence using a session", async function () {
+      // First, open a project session
+      const openResponse = await openProjectSessionHandler({
         projectName,
+      });
+
+      const sessionId = openResponse.content[0].text;
+
+      // Execute batch commands using the session
+      const response = await executeBatchCommandsHandler({
+        projectSessionId: sessionId,
         commands: [
           "echo 'First command' > /workspace/output.txt",
           "echo 'Second command' >> /workspace/output.txt",
@@ -132,11 +148,24 @@ describe("Batch Command Handlers", function () {
       const content = fs.readFileSync(outputPath, "utf8");
       expect(content).to.include("First command");
       expect(content).to.include("Second command");
+
+      // Clean up the session
+      await closeProjectSessionHandler({
+        projectSessionId: sessionId,
+      });
     });
 
     it("should stop execution on error if stopOnError is true", async function () {
-      const response = await executeBatchCommandsHandler({
+      // First, open a project session
+      const openResponse = await openProjectSessionHandler({
         projectName,
+      });
+
+      const sessionId = openResponse.content[0].text;
+
+      // Execute batch commands with an error in the middle
+      const response = await executeBatchCommandsHandler({
+        projectSessionId: sessionId,
         commands: [
           "echo 'First command' > /workspace/output2.txt",
           "cat /nonexistent/file.txt",
@@ -145,9 +174,7 @@ describe("Batch Command Handlers", function () {
         stopOnError: true,
       });
 
-      // Instead of checking isError property, focus on verifying the behavior:
-      // 1. Response content should include error information
-      // 2. Third command shouldn't have executed
+      // Response should include error information
       expect(response.content[0].text).to.include("Failed");
       expect(response.content[0].text).to.include("No such file");
       expect(response.content[0].text).not.to.include("Third command");
@@ -158,11 +185,24 @@ describe("Batch Command Handlers", function () {
       const content = fs.readFileSync(outputPath, "utf8");
       expect(content).to.include("First command");
       expect(content).not.to.include("Third command");
+
+      // Clean up the session
+      await closeProjectSessionHandler({
+        projectSessionId: sessionId,
+      });
     });
 
     it("should continue execution on error if stopOnError is false", async function () {
-      const response = await executeBatchCommandsHandler({
+      // First, open a project session
+      const openResponse = await openProjectSessionHandler({
         projectName,
+      });
+
+      const sessionId = openResponse.content[0].text;
+
+      // Execute batch commands with an error in the middle but continue
+      const response = await executeBatchCommandsHandler({
+        projectSessionId: sessionId,
         commands: [
           "echo 'First command' > /workspace/output3.txt",
           "cat /nonexistent/file.txt",
@@ -182,29 +222,37 @@ describe("Batch Command Handlers", function () {
       const content = fs.readFileSync(outputPath, "utf8");
       expect(content).to.include("First command");
       expect(content).to.include("Third command");
+
+      // Clean up the session
+      await closeProjectSessionHandler({
+        projectSessionId: sessionId,
+      });
     });
 
-    it("should return error for invalid project", async function () {
+    it("should return error for invalid sessions", async function () {
+      // Execute batch commands with invalid session ID
       const response = await executeBatchCommandsHandler({
-        projectName: "non-existent-project",
+        projectSessionId: "invalid-session-id",
         commands: ["echo 'This should fail'"],
       });
 
       // Verify the error response
       expect(response.isError).to.equal(true);
       expect(response.content[0].text).to.include(
-        "Invalid or unregistered project"
+        "Invalid or expired session ID"
       );
     });
+  });
 
-    it("should execute batch commands with copy mode enabled", async function () {
-      // Register a project with copy mode enabled - use dockerImage instead of containerName
+  describe("execute_batch_commands with Copy Mode", function () {
+    beforeEach(function () {
+      // Register a project with copy mode enabled
       createTestConfig(configDir, {
         projects: [
           {
             name: "copy-project",
             hostPath: projectDir,
-            dockerImage: dockerImage, // Use image instead of container for copy mode
+            dockerImage: dockerImage,
             copy: true,
           },
         ],
@@ -213,9 +261,19 @@ describe("Batch Command Handlers", function () {
       // Create a file we'll try to modify
       const outputFile = path.join(projectDir, "copy-output.txt");
       fs.writeFileSync(outputFile, "Original content");
+    });
 
-      const response = await executeBatchCommandsHandler({
+    it("should execute batch commands with copy mode without modifying original files", async function () {
+      // First, open a project session
+      const openResponse = await openProjectSessionHandler({
         projectName: "copy-project",
+      });
+
+      const sessionId = openResponse.content[0].text;
+
+      // Execute batch commands to modify the file
+      const response = await executeBatchCommandsHandler({
+        projectSessionId: sessionId,
         commands: [
           "echo 'Modified in batch' > /workspace/copy-output.txt",
           "echo 'Added new line' >> /workspace/copy-output.txt",
@@ -229,8 +287,58 @@ describe("Batch Command Handlers", function () {
       expect(response.content[0].text).to.include("Added new line");
 
       // But the original file should remain unchanged
-      const originalContent = fs.readFileSync(outputFile, "utf8");
+      const originalContent = fs.readFileSync(
+        path.join(projectDir, "copy-output.txt"),
+        "utf8"
+      );
       expect(originalContent).to.equal("Original content");
+
+      // Clean up the session
+      await closeProjectSessionHandler({
+        projectSessionId: sessionId,
+      });
+    });
+
+    it("should maintain changes across multiple batch command calls in the same session", async function () {
+      // First, open a project session
+      const openResponse = await openProjectSessionHandler({
+        projectName: "copy-project",
+      });
+
+      const sessionId = openResponse.content[0].text;
+
+      // First batch - create a file
+      await executeBatchCommandsHandler({
+        projectSessionId: sessionId,
+        commands: ["echo 'First batch' > /workspace/multi-batch.txt"],
+      });
+
+      // Second batch - append to the file
+      await executeBatchCommandsHandler({
+        projectSessionId: sessionId,
+        commands: ["echo 'Second batch' >> /workspace/multi-batch.txt"],
+      });
+
+      // Third batch - read the file
+      const response = await executeBatchCommandsHandler({
+        projectSessionId: sessionId,
+        commands: ["cat /workspace/multi-batch.txt"],
+      });
+
+      // Verify the file contains content from both batches
+      expect(response.isError).to.equal(undefined);
+      expect(response.content[0].text).to.include("First batch");
+      expect(response.content[0].text).to.include("Second batch");
+
+      // The file should not exist in the original project directory
+      expect(fs.existsSync(path.join(projectDir, "multi-batch.txt"))).to.equal(
+        false
+      );
+
+      // Clean up the session
+      await closeProjectSessionHandler({
+        projectSessionId: sessionId,
+      });
     });
   });
 });
