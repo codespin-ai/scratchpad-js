@@ -1,12 +1,12 @@
 // src/mcp/handlers/files.ts
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as zod from "zod";
-import {
-  getProjectByName,
-  validateProjectName,
-} from "../../config/projectConfig.js";
 import { writeProjectFile } from "../../fs/fileIO.js";
 import { validateFilePath } from "../../fs/pathValidation.js";
+import {
+  getWorkingDirForSession,
+  sessionExists,
+} from "../../sessions/sessionStore.js";
 
 /**
  * Register file operation handlers with the MCP server
@@ -14,9 +14,11 @@ import { validateFilePath } from "../../fs/pathValidation.js";
 export function registerFileHandlers(server: McpServer): void {
   server.tool(
     "write_file",
-    "Write content to a file in a project directory",
+    "Write content to a file in a project directory using a session",
     {
-      projectName: zod.string().describe("The name of the project"),
+      projectSessionId: zod
+        .string()
+        .describe("The session ID from open_project_session"),
       filePath: zod
         .string()
         .describe("Relative path to the file from project root"),
@@ -26,35 +28,36 @@ export function registerFileHandlers(server: McpServer): void {
         .default("overwrite")
         .describe("Write mode - whether to overwrite or append"),
     },
-    async ({ projectName, filePath, content, mode }) => {
-      // Validate project first
-      if (!validateProjectName(projectName)) {
+    async ({ projectSessionId, filePath, content, mode }) => {
+      // Validate the session
+      if (!sessionExists(projectSessionId)) {
         return {
           isError: true,
           content: [
             {
               type: "text",
-              text: `Error: Invalid or unregistered project: ${projectName}`,
+              text: `Error: Invalid or expired session ID: ${projectSessionId}`,
             },
           ],
         };
       }
 
-      const project = getProjectByName(projectName);
-      if (!project) {
+      // Get the working directory from the session
+      const workingDir = getWorkingDirForSession(projectSessionId);
+      if (!workingDir) {
         return {
           isError: true,
           content: [
             {
               type: "text",
-              text: `Error: Project not found: ${projectName}`,
+              text: `Error: Session mapping not found: ${projectSessionId}`,
             },
           ],
         };
       }
 
       // Pre-validate the file path before attempting any operations
-      if (!validateFilePath(project.hostPath, filePath)) {
+      if (!validateFilePath(workingDir, filePath)) {
         return {
           isError: true,
           content: [
@@ -67,8 +70,8 @@ export function registerFileHandlers(server: McpServer): void {
       }
 
       try {
-        // Write file to the project directory (which will perform validation again)
-        writeProjectFile(project.hostPath, filePath, content, mode);
+        // Write file to the session's working directory
+        writeProjectFile(workingDir, filePath, content, mode);
 
         return {
           content: [

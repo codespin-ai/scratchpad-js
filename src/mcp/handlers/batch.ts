@@ -1,8 +1,12 @@
 // src/mcp/handlers/batch.ts
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as zod from "zod";
-import { validateProjectName } from "../../config/projectConfig.js";
 import { executeDockerCommand } from "../../docker/execution.js";
+import {
+  getProjectNameForSession,
+  getWorkingDirForSession,
+  sessionExists,
+} from "../../sessions/sessionStore.js";
 
 /**
  * Register batch command execution handlers with the MCP server
@@ -10,26 +14,45 @@ import { executeDockerCommand } from "../../docker/execution.js";
 export function registerBatchHandlers(server: McpServer): void {
   server.tool(
     "execute_batch_commands",
-    "Execute multiple commands in sequence within a Docker container for a specific project",
+    "Execute multiple commands in sequence using a project session",
     {
       commands: zod
         .array(zod.string())
         .describe("Array of commands to execute in sequence"),
-      projectName: zod.string().describe("The name of the project"),
+      projectSessionId: zod
+        .string()
+        .describe("The session ID from open_project_session"),
       stopOnError: zod
         .boolean()
         .optional()
         .default(true)
         .describe("Whether to stop execution if a command fails"),
     },
-    async ({ commands, projectName, stopOnError }) => {
-      if (!validateProjectName(projectName)) {
+    async ({ commands, projectSessionId, stopOnError }) => {
+      // Validate the session
+      if (!sessionExists(projectSessionId)) {
         return {
           isError: true,
           content: [
             {
               type: "text",
-              text: `Error: Invalid or unregistered project: ${projectName}`,
+              text: `Error: Invalid or expired session ID: ${projectSessionId}`,
+            },
+          ],
+        };
+      }
+
+      // Get the project name and working directory from the session
+      const projectName = getProjectNameForSession(projectSessionId);
+      const workingDir = getWorkingDirForSession(projectSessionId);
+
+      if (!projectName || !workingDir) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Error: Session mapping not found: ${projectSessionId}`,
             },
           ],
         };
@@ -41,7 +64,8 @@ export function registerBatchHandlers(server: McpServer): void {
         try {
           const { stdout, stderr } = await executeDockerCommand(
             projectName,
-            command
+            command,
+            workingDir
           );
           const output = stdout + (stderr ? `\nSTDERR:\n${stderr}` : "");
 

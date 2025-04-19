@@ -1,12 +1,34 @@
 // src/mcp/handlers/batchFiles.ts
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as zod from "zod";
-import {
-  validateProjectName,
-  getProjectByName,
-} from "../../config/projectConfig.js";
 import { writeProjectFile } from "../../fs/fileIO.js";
 import { validateFilePath } from "../../fs/pathValidation.js";
+import {
+  getWorkingDirForSession,
+  sessionExists,
+} from "../../sessions/sessionStore.js";
+
+/**
+ * Format batch operation results for output
+ */
+function formatResults(
+  results: {
+    filePath: string;
+    success: boolean;
+    message: string;
+  }[]
+): string {
+  return results
+    .map((result) => {
+      return (
+        `File: ${result.filePath}\n` +
+        `Status: ${result.success ? "Success" : "Failed"}\n` +
+        `Message: ${result.message}\n` +
+        "----------------------------------------\n"
+      );
+    })
+    .join("\n");
+}
 
 /**
  * Register batch file operation handlers with the MCP server
@@ -14,9 +36,11 @@ import { validateFilePath } from "../../fs/pathValidation.js";
 export function registerBatchFileHandlers(server: McpServer): void {
   server.tool(
     "write_batch_files",
-    "Write content to multiple files in a project directory in a single operation",
+    "Write content to multiple files in a project directory using a session",
     {
-      projectName: zod.string().describe("The name of the project"),
+      projectSessionId: zod
+        .string()
+        .describe("The session ID from open_project_session"),
       files: zod
         .array(
           zod.object({
@@ -37,34 +61,34 @@ export function registerBatchFileHandlers(server: McpServer): void {
         .default(true)
         .describe("Whether to stop execution if a file write fails"),
     },
-    async ({ projectName, files, stopOnError }) => {
-      // Validate project first
-      if (!validateProjectName(projectName)) {
+    async ({ projectSessionId, files, stopOnError }) => {
+      // Validate the session
+      if (!sessionExists(projectSessionId)) {
         return {
           isError: true,
           content: [
             {
               type: "text",
-              text: `Error: Invalid or unregistered project: ${projectName}`,
+              text: `Error: Invalid or expired session ID: ${projectSessionId}`,
             },
           ],
         };
       }
 
-      const project = getProjectByName(projectName);
-      if (!project) {
+      // Get the working directory from the session
+      const workingDir = getWorkingDirForSession(projectSessionId);
+      if (!workingDir) {
         return {
           isError: true,
           content: [
             {
               type: "text",
-              text: `Error: Project not found: ${projectName}`,
+              text: `Error: Session mapping not found: ${projectSessionId}`,
             },
           ],
         };
       }
 
-      const projectDir = project.hostPath;
       const results = [];
       let hasError = false;
 
@@ -74,7 +98,7 @@ export function registerBatchFileHandlers(server: McpServer): void {
       for (const fileOp of files) {
         const { filePath } = fileOp;
 
-        if (!validateFilePath(projectDir, filePath)) {
+        if (!validateFilePath(workingDir, filePath)) {
           hasError = true;
           results.push({
             filePath,
@@ -104,8 +128,8 @@ export function registerBatchFileHandlers(server: McpServer): void {
         const { filePath, content, mode = "overwrite" } = fileOp;
 
         try {
-          // Write the file
-          writeProjectFile(projectDir, filePath, content, mode);
+          // Write the file to the session's working directory
+          writeProjectFile(workingDir, filePath, content, mode);
 
           results.push({
             filePath,
@@ -143,26 +167,4 @@ export function registerBatchFileHandlers(server: McpServer): void {
       };
     }
   );
-}
-
-/**
- * Format batch operation results for output
- */
-function formatResults(
-  results: {
-    filePath: string;
-    success: boolean;
-    message: string;
-  }[]
-): string {
-  return results
-    .map((result) => {
-      return (
-        `File: ${result.filePath}\n` +
-        `Status: ${result.success ? "Success" : "Failed"}\n` +
-        `Message: ${result.message}\n` +
-        "----------------------------------------\n"
-      );
-    })
-    .join("\n");
 }
