@@ -79,17 +79,17 @@ describe("File Handlers with Sessions", function () {
   });
 
   describe("write_file with sessions", function () {
-    it("should write content to a file using a session", async function () {
+    it("should write content to a file using a project session", async function () {
       // First, open a project session
       const openResponse = await openProjectSessionHandler({
         projectName: "test-project",
       });
 
-      const sessionId = openResponse.content[0].text;
+      const projectSessionId = openResponse.content[0].text;
 
-      // Write a file using the session
+      // Write a file using the project session
       const response = await writeFileHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
         filePath: "test.txt",
         content: "Hello, world!",
         mode: "overwrite",
@@ -104,13 +104,13 @@ describe("File Handlers with Sessions", function () {
       expect(fs.existsSync(filePath)).to.equal(true);
       expect(fs.readFileSync(filePath, "utf8")).to.equal("Hello, world!");
 
-      // Clean up the session
+      // Clean up the project session
       await closeProjectSessionHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
       });
     });
 
-    it("should append content to a file using a session", async function () {
+    it("should append content to a file using a project session", async function () {
       // First create a file to append to
       const filePath = path.join(projectDir, "append.txt");
       fs.writeFileSync(filePath, "Initial content\n");
@@ -120,11 +120,11 @@ describe("File Handlers with Sessions", function () {
         projectName: "test-project",
       });
 
-      const sessionId = openResponse.content[0].text;
+      const projectSessionId = openResponse.content[0].text;
 
-      // Append to the file using the session
+      // Append to the file using the project session
       const response = await writeFileHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
         filePath: "append.txt",
         content: "Appended content",
         mode: "append",
@@ -139,9 +139,9 @@ describe("File Handlers with Sessions", function () {
         "Initial content\nAppended content"
       );
 
-      // Clean up the session
+      // Clean up the project session
       await closeProjectSessionHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
       });
     });
 
@@ -151,11 +151,11 @@ describe("File Handlers with Sessions", function () {
         projectName: "test-project",
       });
 
-      const sessionId = openResponse.content[0].text;
+      const projectSessionId = openResponse.content[0].text;
 
       // Write a file in a nested directory
       const response = await writeFileHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
         filePath: "nested/dir/test.txt",
         content: "Nested content",
         mode: "overwrite",
@@ -169,15 +169,15 @@ describe("File Handlers with Sessions", function () {
       expect(fs.existsSync(filePath)).to.equal(true);
       expect(fs.readFileSync(filePath, "utf8")).to.equal("Nested content");
 
-      // Clean up the session
+      // Clean up the project session
       await closeProjectSessionHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
       });
     });
 
-    it("should return error for invalid session IDs", async function () {
+    it("should return error for invalid project session IDs", async function () {
       const response = await writeFileHandler({
-        projectSessionId: "invalid-session-id",
+        projectSessionId: "invalid-project session id",
         filePath: "test.txt",
         content: "This should fail",
         mode: "overwrite",
@@ -186,7 +186,7 @@ describe("File Handlers with Sessions", function () {
       // Verify the error response
       expect(response.isError).to.equal(true);
       expect(response.content[0].text).to.include(
-        "Invalid or expired session ID"
+        "Invalid or expired project session id"
       );
     });
 
@@ -196,11 +196,11 @@ describe("File Handlers with Sessions", function () {
         projectName: "test-project",
       });
 
-      const sessionId = openResponse.content[0].text;
+      const projectSessionId = openResponse.content[0].text;
 
       // Try to write to an invalid path
       const response = await writeFileHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
         filePath: "../outside.txt",
         content: "This should fail",
         mode: "overwrite",
@@ -210,9 +210,9 @@ describe("File Handlers with Sessions", function () {
       expect(response.isError).to.equal(true);
       expect(response.content[0].text).to.include("Invalid file path");
 
-      // Clean up the session
+      // Clean up the project session
       await closeProjectSessionHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
       });
     });
   });
@@ -224,11 +224,11 @@ describe("File Handlers with Sessions", function () {
         projectName: "copy-project",
       });
 
-      const sessionId = openResponse.content[0].text;
+      const projectSessionId = openResponse.content[0].text;
 
-      // Write a file using the session
+      // Write a file using the project session
       const response = await writeFileHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
         filePath: "copied-file.txt",
         content: "This file should only exist in the copy",
         mode: "overwrite",
@@ -242,23 +242,23 @@ describe("File Handlers with Sessions", function () {
       const filePath = path.join(projectDir, "copied-file.txt");
       expect(fs.existsSync(filePath)).to.equal(false);
 
-      // Clean up the session
+      // Clean up the project session
       await closeProjectSessionHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
       });
     });
 
-    it("should allow multiple write operations in the same session", async function () {
+    it("should allow multiple write operations in the same project session", async function () {
       // Open a project session with copy=true
       const openResponse = await openProjectSessionHandler({
         projectName: "copy-project",
       });
 
-      const sessionId = openResponse.content[0].text;
+      const projectSessionId = openResponse.content[0].text;
 
       // Write first file
       await writeFileHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
         filePath: "multi-file1.txt",
         content: "First file content",
         mode: "overwrite",
@@ -266,7 +266,7 @@ describe("File Handlers with Sessions", function () {
 
       // Write second file
       await writeFileHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
         filePath: "multi-file2.txt",
         content: "Second file content",
         mode: "overwrite",
@@ -274,7 +274,7 @@ describe("File Handlers with Sessions", function () {
 
       // Modify first file
       await writeFileHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
         filePath: "multi-file1.txt",
         content: " - Appended content",
         mode: "append",
@@ -288,9 +288,9 @@ describe("File Handlers with Sessions", function () {
         false
       );
 
-      // Clean up the session
+      // Clean up the project session
       await closeProjectSessionHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
       });
     });
   });

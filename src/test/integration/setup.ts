@@ -4,7 +4,7 @@ import * as path from "path";
 import * as os from "os";
 import * as fs from "fs";
 import { setConfigBasePath } from "../../config/projectConfig.js";
-import { openProject, closeSession } from "../../sessions/sessionStore.js";
+import { openProject, closeProjectSession } from "../../projectSessions/projectSessionStore.js";
 
 // Install source map support for better error stack traces
 install();
@@ -20,7 +20,7 @@ export function createTestEnvironment(): string {
 }
 
 /**
- * Creates a test session for a project
+ * Creates a test project session for a project
  * @param projectName The name of the project
  * @returns Session ID or null
  */
@@ -29,11 +29,11 @@ export function createTestSession(projectName: string): string | null {
 }
 
 /**
- * Closes a test session
- * @param sessionId The session ID to close
+ * Closes a test project session
+ * @param projectSessionId The project session id to close
  */
-export function closeTestSession(sessionId: string): void {
-  closeSession(sessionId);
+export function closeTestSession(projectSessionId: string): void {
+  closeProjectSession(projectSessionId);
 }
 
 /**

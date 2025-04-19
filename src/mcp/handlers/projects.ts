@@ -5,7 +5,7 @@ import {
   getProjects,
   validateProjectName,
 } from "../../config/projectConfig.js";
-import { openProject, closeSession } from "../../sessions/sessionStore.js";
+import { openProject, closeProjectSession } from "../../projectSessions/projectSessionStore.js";
 
 /**
  * Register project-related handlers with the MCP server
@@ -54,7 +54,7 @@ export function registerProjectHandlers(server: McpServer): void {
 
   server.tool(
     "open_project_session",
-    "Open a project session, optionally creating a copy of the project files if the project has copy=true",
+    "Open a project session",
     {
       projectName: zod.string().describe("The name of the project to open"),
     },
@@ -72,8 +72,8 @@ export function registerProjectHandlers(server: McpServer): void {
           };
         }
 
-        const sessionId = openProject(projectName);
-        if (!sessionId) {
+        const projectSessionId = openProject(projectName);
+        if (!projectSessionId) {
           return {
             isError: true,
             content: [
@@ -89,7 +89,7 @@ export function registerProjectHandlers(server: McpServer): void {
           content: [
             {
               type: "text",
-              text: sessionId,
+              text: projectSessionId,
             },
           ],
         };
@@ -113,10 +113,10 @@ export function registerProjectHandlers(server: McpServer): void {
     "close_project_session",
     "Close a project session and clean up resources",
     {
-      projectSessionId: zod.string().describe("The session ID to close"),
+      projectSessionId: zod.string().describe("The project session id to close"),
     },
     async ({ projectSessionId }) => {
-      const closed = closeSession(projectSessionId);
+      const closed = closeProjectSession(projectSessionId);
 
       if (closed) {
         return {
@@ -133,7 +133,7 @@ export function registerProjectHandlers(server: McpServer): void {
           content: [
             {
               type: "text",
-              text: `Error: Invalid session ID: ${projectSessionId}`,
+              text: `Error: Invalid project session id: ${projectSessionId}`,
             },
           ],
         };

@@ -79,17 +79,17 @@ describe("Batch File Handlers with Sessions", function () {
   });
 
   describe("write_batch_files with sessions", function () {
-    it("should write multiple files in a single operation using a session", async function () {
+    it("should write multiple files in a single operation using a project session", async function () {
       // First, open a project session
       const openResponse = await openProjectSessionHandler({
         projectName: "test-project",
       });
 
-      const sessionId = openResponse.content[0].text;
+      const projectSessionId = openResponse.content[0].text;
 
-      // Write multiple files using the session
+      // Write multiple files using the project session
       const response = await writeBatchFilesHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
         files: [
           {
             filePath: "file1.txt",
@@ -118,9 +118,9 @@ describe("Batch File Handlers with Sessions", function () {
       expect(fs.readFileSync(file1Path, "utf8")).to.equal("Content for file 1");
       expect(fs.readFileSync(file2Path, "utf8")).to.equal("Content for file 2");
 
-      // Clean up the session
+      // Clean up the project session
       await closeProjectSessionHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
       });
     });
 
@@ -134,11 +134,11 @@ describe("Batch File Handlers with Sessions", function () {
         projectName: "test-project",
       });
 
-      const sessionId = openResponse.content[0].text;
+      const projectSessionId = openResponse.content[0].text;
 
       // Try to write files with one invalid path
       const response = await writeBatchFilesHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
         files: [
           {
             filePath: "../outside.txt", // Invalid path
@@ -163,9 +163,9 @@ describe("Batch File Handlers with Sessions", function () {
         "Initial content\n"
       );
 
-      // Clean up the session
+      // Clean up the project session
       await closeProjectSessionHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
       });
     });
 
@@ -179,11 +179,11 @@ describe("Batch File Handlers with Sessions", function () {
         projectName: "test-project",
       });
 
-      const sessionId = openResponse.content[0].text;
+      const projectSessionId = openResponse.content[0].text;
 
       // Try to write files with one invalid path but continue
       const response = await writeBatchFilesHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
         files: [
           {
             filePath: "../outside.txt", // Invalid path
@@ -208,15 +208,15 @@ describe("Batch File Handlers with Sessions", function () {
         "Initial content\nAppended content"
       );
 
-      // Clean up the session
+      // Clean up the project session
       await closeProjectSessionHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
       });
     });
 
     it("should return error for invalid sessions", async function () {
       const response = await writeBatchFilesHandler({
-        projectSessionId: "invalid-session-id",
+        projectSessionId: "invalid-project session id",
         files: [
           {
             filePath: "file.txt",
@@ -229,7 +229,7 @@ describe("Batch File Handlers with Sessions", function () {
       // Verify the error response
       expect(response.isError).to.equal(true);
       expect(response.content[0].text).to.include(
-        "Invalid or expired session ID"
+        "Invalid or expired project session id"
       );
     });
   });
@@ -241,11 +241,11 @@ describe("Batch File Handlers with Sessions", function () {
         projectName: "copy-project",
       });
 
-      const sessionId = openResponse.content[0].text;
+      const projectSessionId = openResponse.content[0].text;
 
-      // Write multiple files using the session
+      // Write multiple files using the project session
       const response = await writeBatchFilesHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
         files: [
           {
             filePath: "batch-copy1.txt",
@@ -271,9 +271,9 @@ describe("Batch File Handlers with Sessions", function () {
       expect(fs.existsSync(file1Path)).to.equal(false);
       expect(fs.existsSync(file2Path)).to.equal(false);
 
-      // Clean up the session
+      // Clean up the project session
       await closeProjectSessionHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
       });
     });
   });

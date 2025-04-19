@@ -4,9 +4,9 @@ import * as zod from "zod";
 import { writeProjectFile } from "../../fs/fileIO.js";
 import { validateFilePath } from "../../fs/pathValidation.js";
 import {
-  getWorkingDirForSession,
-  sessionExists,
-} from "../../sessions/sessionStore.js";
+  getWorkingDirForProjectSession,
+  projectSessionExists,
+} from "../../projectSessions/projectSessionStore.js";
 
 /**
  * Register file operation handlers with the MCP server
@@ -14,11 +14,11 @@ import {
 export function registerFileHandlers(server: McpServer): void {
   server.tool(
     "write_file",
-    "Write content to a file in a project directory using a session",
+    "Write content to a file in a project directory using a project session",
     {
       projectSessionId: zod
         .string()
-        .describe("The session ID from open_project_session"),
+        .describe("The project session id from open_project_session"),
       filePath: zod
         .string()
         .describe("Relative path to the file from project root"),
@@ -29,21 +29,21 @@ export function registerFileHandlers(server: McpServer): void {
         .describe("Write mode - whether to overwrite or append"),
     },
     async ({ projectSessionId, filePath, content, mode }) => {
-      // Validate the session
-      if (!sessionExists(projectSessionId)) {
+      // Validate the project session
+      if (!projectSessionExists(projectSessionId)) {
         return {
           isError: true,
           content: [
             {
               type: "text",
-              text: `Error: Invalid or expired session ID: ${projectSessionId}`,
+              text: `Error: Invalid or expired project session id: ${projectSessionId}`,
             },
           ],
         };
       }
 
-      // Get the working directory from the session
-      const workingDir = getWorkingDirForSession(projectSessionId);
+      // Get the working directory from the project session
+      const workingDir = getWorkingDirForProjectSession(projectSessionId);
       if (!workingDir) {
         return {
           isError: true,
@@ -70,7 +70,7 @@ export function registerFileHandlers(server: McpServer): void {
       }
 
       try {
-        // Write file to the session's working directory
+        // Write file to the project session's working directory
         writeProjectFile(workingDir, filePath, content, mode);
 
         return {

@@ -3,12 +3,12 @@ import { expect } from "chai";
 import * as fs from "fs";
 import * as path from "path";
 import {
-  closeSession,
-  getProjectNameForSession,
-  getWorkingDirForSession,
+  closeProjectSession,
+  getProjectNameForProjectSession,
+  getWorkingDirForProjectSession,
   openProject,
-  sessionExists,
-} from "../../../sessions/sessionStore.js";
+  projectSessionExists,
+} from "../../../projectSessions/projectSessionStore.js";
 import { createTestConfig, setupTestEnvironment } from "../setup.js";
 import { createTestFile } from "../testUtils.js";
 
@@ -33,7 +33,7 @@ describe("Session Store", function () {
   });
 
   describe("openProject", function () {
-    it("should open a session without copying files when copy=false", function () {
+    it("should open a project session without copying files when copy=false", function () {
       // Register a project without copy mode
       createTestConfig(configDir, {
         projects: [
@@ -46,25 +46,25 @@ describe("Session Store", function () {
         ],
       });
 
-      // Open a session
-      const sessionId = openProject("test-project");
-      expect(sessionId).to.be.a("string");
-      expect(sessionId).to.not.equal(undefined);
-      expect(sessionId).to.not.equal(null);
+      // Open a project session
+      const projectSessionId = openProject("test-project");
+      expect(projectSessionId).to.be.a("string");
+      expect(projectSessionId).to.not.equal(undefined);
+      expect(projectSessionId).to.not.equal(null);
 
-      // Verify session is registered
-      expect(sessionExists(sessionId as string)).to.equal(true);
+      // Verify project session is registered
+      expect(projectSessionExists(projectSessionId as string)).to.equal(true);
 
       // Verify project name is correct
-      expect(getProjectNameForSession(sessionId as string)).to.equal(
+      expect(getProjectNameForProjectSession(projectSessionId as string)).to.equal(
         "test-project"
       );
 
       // Verify working directory is the original project directory
-      expect(getWorkingDirForSession(sessionId as string)).to.equal(projectDir);
+      expect(getWorkingDirForProjectSession(projectSessionId as string)).to.equal(projectDir);
     });
 
-    it("should open a session with copying files when copy=true", function () {
+    it("should open a project session with copying files when copy=true", function () {
       // Register a project with copy mode
       createTestConfig(configDir, {
         projects: [
@@ -77,22 +77,22 @@ describe("Session Store", function () {
         ],
       });
 
-      // Open a session
-      const sessionId = openProject("test-project");
-      expect(sessionId).to.be.a("string");
-      expect(sessionId).to.not.equal(undefined);
-      expect(sessionId).to.not.equal(null);
+      // Open a project session
+      const projectSessionId = openProject("test-project");
+      expect(projectSessionId).to.be.a("string");
+      expect(projectSessionId).to.not.equal(undefined);
+      expect(projectSessionId).to.not.equal(null);
 
-      // Verify session is registered
-      expect(sessionExists(sessionId as string)).to.equal(true);
+      // Verify project session is registered
+      expect(projectSessionExists(projectSessionId as string)).to.equal(true);
 
       // Verify project name is correct
-      expect(getProjectNameForSession(sessionId as string)).to.equal(
+      expect(getProjectNameForProjectSession(projectSessionId as string)).to.equal(
         "test-project"
       );
 
       // Verify working directory is not the original project directory
-      const workingDir = getWorkingDirForSession(sessionId as string);
+      const workingDir = getWorkingDirForProjectSession(projectSessionId as string);
       expect(workingDir).to.not.equal(projectDir);
 
       // Verify the test file was copied to the temp directory
@@ -117,13 +117,13 @@ describe("Session Store", function () {
       });
 
       // Try to open non-existent project
-      const sessionId = openProject("non-existent-project");
-      expect(sessionId).to.equal(null);
+      const projectSessionId = openProject("non-existent-project");
+      expect(projectSessionId).to.equal(null);
     });
   });
 
   describe("closeSession", function () {
-    it("should close a session and return true", function () {
+    it("should close a project session and return true", function () {
       // Register a project
       createTestConfig(configDir, {
         projects: [
@@ -135,20 +135,20 @@ describe("Session Store", function () {
         ],
       });
 
-      // Open a session
-      const sessionId = openProject("test-project");
-      expect(sessionId).to.be.a("string");
+      // Open a project session
+      const projectSessionId = openProject("test-project");
+      expect(projectSessionId).to.be.a("string");
 
-      // Close the session
-      const result = closeSession(sessionId as string);
+      // Close the project session
+      const result = closeProjectSession(projectSessionId as string);
       expect(result).to.equal(true);
 
-      // Verify session no longer exists
-      expect(sessionExists(sessionId as string)).to.equal(false);
+      // Verify project session no longer exists
+      expect(projectSessionExists(projectSessionId as string)).to.equal(false);
     });
 
     it("should return false for non-existent sessions", function () {
-      const result = closeSession("non-existent-session");
+      const result = closeProjectSession("non-existent-project session");
       expect(result).to.equal(false);
     });
 
@@ -165,15 +165,15 @@ describe("Session Store", function () {
         ],
       });
 
-      // Open a session
-      const sessionId = openProject("test-project");
-      const workingDir = getWorkingDirForSession(sessionId as string);
+      // Open a project session
+      const projectSessionId = openProject("test-project");
+      const workingDir = getWorkingDirForProjectSession(projectSessionId as string);
 
       // Verify temp directory exists
       expect(fs.existsSync(workingDir as string)).to.equal(true);
 
-      // Close the session
-      closeSession(sessionId as string);
+      // Close the project session
+      closeProjectSession(projectSessionId as string);
 
       // Verify temp directory was removed
       expect(fs.existsSync(workingDir as string)).to.equal(false);
@@ -198,31 +198,31 @@ describe("Session Store", function () {
       const sessionId1 = openProject("test-project");
       const sessionId2 = openProject("test-project");
 
-      const workingDir1 = getWorkingDirForSession(sessionId1 as string);
-      const workingDir2 = getWorkingDirForSession(sessionId2 as string);
+      const workingDir1 = getWorkingDirForProjectSession(sessionId1 as string);
+      const workingDir2 = getWorkingDirForProjectSession(sessionId2 as string);
 
       // Verify working directories are different
       expect(workingDir1).to.not.equal(workingDir2);
 
-      // Make changes in first session
+      // Make changes in first project session
       fs.writeFileSync(
         path.join(workingDir1 as string, "test.txt"),
-        "Modified in session 1"
+        "Modified in project session 1"
       );
 
-      // Make changes in second session
+      // Make changes in second project session
       fs.writeFileSync(
         path.join(workingDir2 as string, "test.txt"),
-        "Modified in session 2"
+        "Modified in project session 2"
       );
 
       // Verify changes are isolated
       expect(
         fs.readFileSync(path.join(workingDir1 as string, "test.txt"), "utf8")
-      ).to.equal("Modified in session 1");
+      ).to.equal("Modified in project session 1");
       expect(
         fs.readFileSync(path.join(workingDir2 as string, "test.txt"), "utf8")
-      ).to.equal("Modified in session 2");
+      ).to.equal("Modified in project session 2");
 
       // Verify original file is unchanged
       expect(
@@ -230,8 +230,8 @@ describe("Session Store", function () {
       ).to.equal("Original content");
 
       // Clean up
-      closeSession(sessionId1 as string);
-      closeSession(sessionId2 as string);
+      closeProjectSession(sessionId1 as string);
+      closeProjectSession(sessionId2 as string);
     });
   });
 });

@@ -4,9 +4,9 @@ import * as zod from "zod";
 import { writeProjectFile } from "../../fs/fileIO.js";
 import { validateFilePath } from "../../fs/pathValidation.js";
 import {
-  getWorkingDirForSession,
-  sessionExists,
-} from "../../sessions/sessionStore.js";
+  getWorkingDirForProjectSession,
+  projectSessionExists,
+} from "../../projectSessions/projectSessionStore.js";
 
 /**
  * Format batch operation results for output
@@ -36,11 +36,11 @@ function formatResults(
 export function registerBatchFileHandlers(server: McpServer): void {
   server.tool(
     "write_batch_files",
-    "Write content to multiple files in a project directory using a session",
+    "Write content to multiple files in a project directory using a project session",
     {
       projectSessionId: zod
         .string()
-        .describe("The session ID from open_project_session"),
+        .describe("The project session id from open_project_session"),
       files: zod
         .array(
           zod.object({
@@ -62,21 +62,21 @@ export function registerBatchFileHandlers(server: McpServer): void {
         .describe("Whether to stop execution if a file write fails"),
     },
     async ({ projectSessionId, files, stopOnError }) => {
-      // Validate the session
-      if (!sessionExists(projectSessionId)) {
+      // Validate the project session
+      if (!projectSessionExists(projectSessionId)) {
         return {
           isError: true,
           content: [
             {
               type: "text",
-              text: `Error: Invalid or expired session ID: ${projectSessionId}`,
+              text: `Error: Invalid or expired project session id: ${projectSessionId}`,
             },
           ],
         };
       }
 
-      // Get the working directory from the session
-      const workingDir = getWorkingDirForSession(projectSessionId);
+      // Get the working directory from the project session
+      const workingDir = getWorkingDirForProjectSession(projectSessionId);
       if (!workingDir) {
         return {
           isError: true,
@@ -128,7 +128,7 @@ export function registerBatchFileHandlers(server: McpServer): void {
         const { filePath, content, mode = "overwrite" } = fileOp;
 
         try {
-          // Write the file to the session's working directory
+          // Write the file to the project session's working directory
           writeProjectFile(workingDir, filePath, content, mode);
 
           results.push({

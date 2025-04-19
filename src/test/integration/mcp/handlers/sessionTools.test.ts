@@ -6,7 +6,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerProjectHandlers } from "../../../../mcp/handlers/projects.js";
 import { setupTestEnvironment, createTestConfig } from "../../setup.js";
 import { createTestFile } from "../../testUtils.js";
-import { getWorkingDirForSession } from "../../../../sessions/sessionStore.js";
+import { getWorkingDirForProjectSession } from "../../../../projectSessions/projectSessionStore.js";
 
 // Response type for MCP tools
 interface McpResponse {
@@ -80,7 +80,7 @@ describe("Session-Based Tools", function () {
   });
 
   describe("open_project_session", function () {
-    it("should open a session for a valid project", async function () {
+    it("should open a project session for a valid project", async function () {
       const response = await openProjectSessionHandler({
         projectName: "test-project",
       });
@@ -106,16 +106,16 @@ describe("Session-Based Tools", function () {
   });
 
   describe("close_project_session", function () {
-    it("should close a valid session", async function () {
-      // First open a session
+    it("should close a valid project session", async function () {
+      // First open a project session
       const openResponse = await openProjectSessionHandler({
         projectName: "test-project",
       });
-      const sessionId = openResponse.content[0].text;
+      const projectSessionId = openResponse.content[0].text;
 
       // Then close it
       const closeResponse = await closeProjectSessionHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
       });
 
       // Verify the response
@@ -123,28 +123,28 @@ describe("Session-Based Tools", function () {
       expect(closeResponse.content[0].text).to.include("Session closed");
     });
 
-    it("should return an error for invalid session IDs", async function () {
+    it("should return an error for invalid project session IDs", async function () {
       const response = await closeProjectSessionHandler({
-        projectSessionId: "non-existent-session",
+        projectSessionId: "non-existent-project session",
       });
 
       // Verify the error response
       expect(response.isError).to.equal(true);
-      expect(response.content[0].text).to.include("Invalid session ID");
+      expect(response.content[0].text).to.include("Invalid project session id");
     });
   });
 
   describe("Copy Mode Behavior", function () {
-    it("should create temporary files when opening a session with copy=true", async function () {
-      // Open a session for a project with copy=true
+    it("should create temporary files when opening a project session with copy=true", async function () {
+      // Open a project session for a project with copy=true
       const response = await openProjectSessionHandler({
         projectName: "copy-project",
       });
 
-      const sessionId = response.content[0].text;
+      const projectSessionId = response.content[0].text;
 
-      // Get the working directory from the session
-      const workingDir = getWorkingDirForSession(sessionId);
+      // Get the working directory from the project session
+      const workingDir = getWorkingDirForProjectSession(projectSessionId);
 
       // Verify the working directory exists and is not the original project directory
       expect(workingDir).to.not.equal(projectDir);
@@ -158,9 +158,9 @@ describe("Session-Based Tools", function () {
         fs.readFileSync(path.join(workingDir as string, "test.txt"), "utf8")
       ).to.equal("Test content");
 
-      // Close the session
+      // Close the project session
       await closeProjectSessionHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
       });
 
       // Verify the working directory was cleaned up

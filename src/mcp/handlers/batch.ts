@@ -3,10 +3,10 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as zod from "zod";
 import { executeDockerCommand } from "../../docker/execution.js";
 import {
-  getProjectNameForSession,
-  getWorkingDirForSession,
-  sessionExists,
-} from "../../sessions/sessionStore.js";
+  getProjectNameForProjectSession,
+  getWorkingDirForProjectSession,
+  projectSessionExists,
+} from "../../projectSessions/projectSessionStore.js";
 
 /**
  * Register batch command execution handlers with the MCP server
@@ -21,7 +21,7 @@ export function registerBatchHandlers(server: McpServer): void {
         .describe("Array of commands to execute in sequence"),
       projectSessionId: zod
         .string()
-        .describe("The session ID from open_project_session"),
+        .describe("The project session id from open_project_session"),
       stopOnError: zod
         .boolean()
         .optional()
@@ -29,22 +29,22 @@ export function registerBatchHandlers(server: McpServer): void {
         .describe("Whether to stop execution if a command fails"),
     },
     async ({ commands, projectSessionId, stopOnError }) => {
-      // Validate the session
-      if (!sessionExists(projectSessionId)) {
+      // Validate the project session
+      if (!projectSessionExists(projectSessionId)) {
         return {
           isError: true,
           content: [
             {
               type: "text",
-              text: `Error: Invalid or expired session ID: ${projectSessionId}`,
+              text: `Error: Invalid or expired project session id: ${projectSessionId}`,
             },
           ],
         };
       }
 
-      // Get the project name and working directory from the session
-      const projectName = getProjectNameForSession(projectSessionId);
-      const workingDir = getWorkingDirForSession(projectSessionId);
+      // Get the project name and working directory from the project session
+      const projectName = getProjectNameForProjectSession(projectSessionId);
+      const workingDir = getWorkingDirForProjectSession(projectSessionId);
 
       if (!projectName || !workingDir) {
         return {

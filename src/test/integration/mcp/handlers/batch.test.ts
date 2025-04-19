@@ -117,17 +117,17 @@ describe("Batch Command Handlers with Sessions", function () {
       });
     });
 
-    it("should execute a batch of commands in sequence using a session", async function () {
+    it("should execute a batch of commands in sequence using a project session", async function () {
       // First, open a project session
       const openResponse = await openProjectSessionHandler({
         projectName,
       });
 
-      const sessionId = openResponse.content[0].text;
+      const projectSessionId = openResponse.content[0].text;
 
-      // Execute batch commands using the session
+      // Execute batch commands using the project session
       const response = await executeBatchCommandsHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
         commands: [
           "echo 'First command' > /workspace/output.txt",
           "echo 'Second command' >> /workspace/output.txt",
@@ -147,9 +147,9 @@ describe("Batch Command Handlers with Sessions", function () {
       expect(content).to.include("First command");
       expect(content).to.include("Second command");
 
-      // Clean up the session
+      // Clean up the project session
       await closeProjectSessionHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
       });
     });
 
@@ -159,11 +159,11 @@ describe("Batch Command Handlers with Sessions", function () {
         projectName,
       });
 
-      const sessionId = openResponse.content[0].text;
+      const projectSessionId = openResponse.content[0].text;
 
       // Execute batch commands with an error in the middle
       const response = await executeBatchCommandsHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
         commands: [
           "echo 'First command' > /workspace/output2.txt",
           "cat /nonexistent/file.txt",
@@ -184,9 +184,9 @@ describe("Batch Command Handlers with Sessions", function () {
       expect(content).to.include("First command");
       expect(content).not.to.include("Third command");
 
-      // Clean up the session
+      // Clean up the project session
       await closeProjectSessionHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
       });
     });
 
@@ -196,11 +196,11 @@ describe("Batch Command Handlers with Sessions", function () {
         projectName,
       });
 
-      const sessionId = openResponse.content[0].text;
+      const projectSessionId = openResponse.content[0].text;
 
       // Execute batch commands with an error in the middle but continue
       const response = await executeBatchCommandsHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
         commands: [
           "echo 'First command' > /workspace/output3.txt",
           "cat /nonexistent/file.txt",
@@ -221,23 +221,23 @@ describe("Batch Command Handlers with Sessions", function () {
       expect(content).to.include("First command");
       expect(content).to.include("Third command");
 
-      // Clean up the session
+      // Clean up the project session
       await closeProjectSessionHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
       });
     });
 
     it("should return error for invalid sessions", async function () {
-      // Execute batch commands with invalid session ID
+      // Execute batch commands with invalid project session id
       const response = await executeBatchCommandsHandler({
-        projectSessionId: "invalid-session-id",
+        projectSessionId: "invalid-project session id",
         commands: ["echo 'This should fail'"],
       });
 
       // Verify the error response
       expect(response.isError).to.equal(true);
       expect(response.content[0].text).to.include(
-        "Invalid or expired session ID"
+        "Invalid or expired project session id"
       );
     });
   });
@@ -267,11 +267,11 @@ describe("Batch Command Handlers with Sessions", function () {
         projectName: "copy-project",
       });
 
-      const sessionId = openResponse.content[0].text;
+      const projectSessionId = openResponse.content[0].text;
 
       // Execute batch commands to modify the file
       const response = await executeBatchCommandsHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
         commands: [
           "echo 'Modified in batch' > /workspace/copy-output.txt",
           "echo 'Added new line' >> /workspace/copy-output.txt",
@@ -291,35 +291,35 @@ describe("Batch Command Handlers with Sessions", function () {
       );
       expect(originalContent).to.equal("Original content");
 
-      // Clean up the session
+      // Clean up the project session
       await closeProjectSessionHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
       });
     });
 
-    it("should maintain changes across multiple batch command calls in the same session", async function () {
+    it("should maintain changes across multiple batch command calls in the same project session", async function () {
       // First, open a project session
       const openResponse = await openProjectSessionHandler({
         projectName: "copy-project",
       });
 
-      const sessionId = openResponse.content[0].text;
+      const projectSessionId = openResponse.content[0].text;
 
       // First batch - create a file
       await executeBatchCommandsHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
         commands: ["echo 'First batch' > /workspace/multi-batch.txt"],
       });
 
       // Second batch - append to the file
       await executeBatchCommandsHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
         commands: ["echo 'Second batch' >> /workspace/multi-batch.txt"],
       });
 
       // Third batch - read the file
       const response = await executeBatchCommandsHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
         commands: ["cat /workspace/multi-batch.txt"],
       });
 
@@ -333,9 +333,9 @@ describe("Batch Command Handlers with Sessions", function () {
         false
       );
 
-      // Clean up the session
+      // Clean up the project session
       await closeProjectSessionHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
       });
     });
   });

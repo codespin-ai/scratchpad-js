@@ -120,17 +120,17 @@ describe("Execute Handlers with Sessions", function () {
       });
     });
 
-    it("should execute a command in the container using a session", async function () {
+    it("should execute a command in the container using a project session", async function () {
       // First, open a project session
       const openResponse = await openProjectSessionHandler({
         projectName,
       });
 
-      const sessionId = openResponse.content[0].text;
+      const projectSessionId = openResponse.content[0].text;
 
-      // Now execute command using the session
+      // Now execute command using the project session
       const response = await executeCommandHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
         command: "cat /workspace/test.txt",
       });
 
@@ -138,9 +138,9 @@ describe("Execute Handlers with Sessions", function () {
       expect(response.isError).to.equal(undefined);
       expect(response.content[0].text).to.include("Hello from execute test!");
 
-      // Clean up the session
+      // Clean up the project session
       await closeProjectSessionHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
       });
     });
 
@@ -150,11 +150,11 @@ describe("Execute Handlers with Sessions", function () {
         projectName,
       });
 
-      const sessionId = openResponse.content[0].text;
+      const projectSessionId = openResponse.content[0].text;
 
       // Execute a command that will fail
       const response = await executeCommandHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
         command: "cat /nonexistent/file.txt",
       });
 
@@ -162,23 +162,23 @@ describe("Execute Handlers with Sessions", function () {
       expect(response.isError).to.equal(true);
       expect(response.content[0].text).to.include("No such file");
 
-      // Clean up the session
+      // Clean up the project session
       await closeProjectSessionHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
       });
     });
 
     it("should return error for invalid sessions", async function () {
-      // Execute command with invalid session ID
+      // Execute command with invalid project session id
       const response = await executeCommandHandler({
-        projectSessionId: "invalid-session-id",
+        projectSessionId: "invalid-project session id",
         command: "echo 'This should fail'",
       });
 
       // Verify the error response
       expect(response.isError).to.equal(true);
       expect(response.content[0].text).to.include(
-        "Invalid or expired session ID"
+        "Invalid or expired project session id"
       );
     });
   });
@@ -197,17 +197,17 @@ describe("Execute Handlers with Sessions", function () {
       });
     });
 
-    it("should execute a command with the image using a session", async function () {
+    it("should execute a command with the image using a project session", async function () {
       // First, open a project session
       const openResponse = await openProjectSessionHandler({
         projectName,
       });
 
-      const sessionId = openResponse.content[0].text;
+      const projectSessionId = openResponse.content[0].text;
 
-      // Now execute command using the session
+      // Now execute command using the project session
       const response = await executeCommandHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
         command: "cat /workspace/test.txt",
       });
 
@@ -215,9 +215,9 @@ describe("Execute Handlers with Sessions", function () {
       expect(response.isError).to.equal(undefined);
       expect(response.content[0].text).to.include("Hello from execute test!");
 
-      // Clean up the session
+      // Clean up the project session
       await closeProjectSessionHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
       });
     });
   });
@@ -247,11 +247,11 @@ describe("Execute Handlers with Sessions", function () {
         projectName,
       });
 
-      const sessionId = openResponse.content[0].text;
+      const projectSessionId = openResponse.content[0].text;
 
       // Execute a command that modifies a file
       const response = await executeCommandHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
         command:
           "echo 'Modified content' > /workspace/for-copy-test.txt && cat /workspace/for-copy-test.txt",
       });
@@ -266,30 +266,30 @@ describe("Execute Handlers with Sessions", function () {
         "This file should not change"
       );
 
-      // Clean up the session
+      // Clean up the project session
       await closeProjectSessionHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
       });
     });
 
-    it("should maintain changes across multiple commands in the same session", async function () {
+    it("should maintain changes across multiple commands in the same project session", async function () {
       // First, open a project session
       const openResponse = await openProjectSessionHandler({
         projectName,
       });
 
-      const sessionId = openResponse.content[0].text;
+      const projectSessionId = openResponse.content[0].text;
 
       // Execute a command that creates a file
       await executeCommandHandler({
-        projectSessionId: sessionId,
-        command: "echo 'First command' > /workspace/session-test.txt",
+        projectSessionId,
+        command: "echo 'First command' > /workspace/project-session-test.txt",
       });
 
       // Execute a second command that reads the file created by the first command
       const response = await executeCommandHandler({
-        projectSessionId: sessionId,
-        command: "cat /workspace/session-test.txt",
+        projectSessionId,
+        command: "cat /workspace/project-session-test.txt",
       });
 
       // Verify the second command can see the file created by the first
@@ -297,13 +297,13 @@ describe("Execute Handlers with Sessions", function () {
       expect(response.content[0].text).to.include("First command");
 
       // The file should not exist in the original project directory
-      expect(fs.existsSync(path.join(projectDir, "session-test.txt"))).to.equal(
+      expect(fs.existsSync(path.join(projectDir, "project-session-test.txt"))).to.equal(
         false
       );
 
-      // Clean up the session
+      // Clean up the project session
       await closeProjectSessionHandler({
-        projectSessionId: sessionId,
+        projectSessionId,
       });
     });
   });

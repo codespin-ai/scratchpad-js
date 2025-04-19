@@ -23,7 +23,7 @@ export const gid = process.getgid?.();
  * Execute a command in a Docker container based on project configuration
  * @param projectName Name of the project
  * @param command Command to execute
- * @param hostDir Working directory to mount (session working dir)
+ * @param hostDir Working directory to mount (project session working dir)
  */
 export async function executeDockerCommand(
   projectName: string,
