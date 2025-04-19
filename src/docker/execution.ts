@@ -2,11 +2,6 @@
 import { exec } from "child_process";
 import { promisify } from "util";
 import { getProjectByName } from "../config/projectConfig.js";
-import {
-  createTempDirectory,
-  copyDirectory,
-  removeDirectory,
-} from "../fs/dirUtils.js";
 
 const execAsync = promisify(exec);
 
@@ -26,40 +21,33 @@ export const gid = process.getgid?.();
 
 /**
  * Execute a command in a Docker container based on project configuration
+ * @param projectName Name of the project
+ * @param command Command to execute
+ * @param hostDir Working directory to mount (session working dir)
  */
 export async function executeDockerCommand(
   projectName: string,
-  command: string
+  command: string,
+  hostDir: string
 ): Promise<ExecuteResult> {
   const project = getProjectByName(projectName);
   if (!project) {
     throw new Error(`Project not registered: ${projectName}`);
   }
 
-  // Initialize tempDir as undefined
-  let tempDir: string | undefined = undefined;
-
   try {
-    // If copy mode is enabled AND we're using a Docker image (not an existing container)
-    // Only create temp directory for image-based execution, not for container execution
-    if (project.copy && project.dockerImage) {
-      tempDir = createTempDirectory(`codebox-${projectName}-`);
-      copyDirectory(project.hostPath, tempDir);
-    }
-
     if (project.containerName) {
-      // Execute in existing container - don't use the temp directory for container execution
+      // Execute in existing container
       return await executeInExistingContainer(
         project.containerName,
         command,
         project.containerPath
       );
     } else if (project.dockerImage) {
-      // Execute in new container from image - use the temp directory if copy is enabled
-      const sourceDir = tempDir || project.hostPath;
+      // Execute in new container from image
       return await executeWithDockerImage(
         project.dockerImage,
-        sourceDir,
+        hostDir,
         command,
         project.containerPath,
         project.network
@@ -79,15 +67,6 @@ export async function executeDockerCommand(
         (error as Error).message ? (error as Error).message + "\n" : ""
       }${combinedOutput}`
     );
-  } finally {
-    // Clean up temporary directory if it was created
-    if (tempDir) {
-      try {
-        removeDirectory(tempDir);
-      } catch (error) {
-        console.error(`Error cleaning up temporary directory: ${error}`);
-      }
-    }
   }
 }
 

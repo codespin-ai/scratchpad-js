@@ -7,6 +7,11 @@ import {
   checkNetworkExists,
   executeDockerCommand,
 } from "../../../docker/execution.js";
+import {
+  closeSession,
+  getWorkingDirForSession,
+  openProject,
+} from "../../../sessions/sessionStore.js";
 import { createTestConfig, setupTestEnvironment } from "../setup.js";
 import {
   createNetwork,
@@ -15,11 +20,10 @@ import {
   isDockerAvailable,
   removeContainer,
   removeNetwork,
-  uniqueName,
-  verifyFileContent,
+  uniqueName
 } from "../testUtils.js";
 
-describe("Docker Execution", function () {
+describe("Docker Execution with Sessions", function () {
   this.timeout(30000); // Docker operations can be slow
 
   let configDir: string;
@@ -119,58 +123,49 @@ describe("Docker Execution", function () {
       });
     });
 
-    it("should execute commands in an existing container", async function () {
+    it("should execute commands in an existing container using session working directory", async function () {
+      // Open a session for testing
+      const sessionId = openProject(projectName);
+      expect(sessionId).to.not.equal(null);
+
+      // Get the working directory from the session
+      const workingDir = getWorkingDirForSession(sessionId as string);
+      expect(workingDir).to.equal(projectDir);
+
+      // Execute command using project name and session working directory
       const { stdout } = await executeDockerCommand(
         projectName,
-        "cat /workspace/test.txt"
+        "cat /workspace/test.txt",
+        workingDir as string
       );
 
       expect(stdout).to.include("Hello from Docker test!");
+
+      // Close the session
+      closeSession(sessionId as string);
     });
 
     it("should handle command errors", async function () {
+      // Open a session for testing
+      const sessionId = openProject(projectName);
+      const workingDir = getWorkingDirForSession(sessionId as string);
+
       try {
-        await executeDockerCommand(projectName, "cat /nonexistent/file.txt");
+        await executeDockerCommand(
+          projectName,
+          "cat /nonexistent/file.txt",
+          workingDir as string
+        );
         // Should not reach here
         expect.fail("Command should have thrown an error");
       } catch (error: unknown) {
         expect((error as Error).message).to.include(
           "No such file or directory"
         );
+      } finally {
+        // Close the session
+        closeSession(sessionId as string);
       }
-    });
-
-    it("should ignore copy mode for container execution", async function () {
-      // Register the container with copy mode (which should be ignored)
-      createTestConfig(configDir, {
-        projects: [
-          {
-            name: "container-with-copy",
-            hostPath: projectDir,
-            containerName: containerName,
-            copy: true, // This should be ignored for container execution
-          },
-        ],
-      });
-
-      // Create a file that we'll modify
-      createTestFile(
-        path.join(projectDir, "container-modify.txt"),
-        "Original content"
-      );
-
-      // Execute a command that modifies the file - use echo -n to avoid trailing newline
-      await executeDockerCommand(
-        "container-with-copy",
-        "echo -n 'Modified by container' > /workspace/container-modify.txt"
-      );
-
-      // Since copy mode is ignored for containers, the original file SHOULD be modified
-      // Trim the content to handle potential newline differences across platforms
-      const content = fs
-        .readFileSync(path.join(projectDir, "container-modify.txt"), "utf8")
-        .trim();
-      expect(content).to.equal("Modified by container");
     });
   });
 
@@ -188,13 +183,26 @@ describe("Docker Execution", function () {
       });
     });
 
-    it("should execute commands with a Docker image", async function () {
+    it("should execute commands with a Docker image using session working directory", async function () {
+      // Open a session for testing
+      const sessionId = openProject(projectName);
+      expect(sessionId).to.not.equal(null);
+
+      // Get the working directory from the session
+      const workingDir = getWorkingDirForSession(sessionId as string);
+      expect(workingDir).to.equal(projectDir);
+
+      // Execute command using project name and session working directory
       const { stdout } = await executeDockerCommand(
         projectName,
-        "cat /workspace/test.txt"
+        "cat /workspace/test.txt",
+        workingDir as string
       );
 
       expect(stdout).to.include("Hello from Docker test!");
+
+      // Close the session
+      closeSession(sessionId as string);
     });
 
     it("should respect custom container path", async function () {
@@ -210,12 +218,20 @@ describe("Docker Execution", function () {
         ],
       });
 
+      // Open a session for testing
+      const sessionId = openProject(projectName);
+      const workingDir = getWorkingDirForSession(sessionId as string);
+
       const { stdout } = await executeDockerCommand(
         projectName,
-        "cat /custom-path/test.txt"
+        "cat /custom-path/test.txt",
+        workingDir as string
       );
 
       expect(stdout).to.include("Hello from Docker test!");
+
+      // Close the session
+      closeSession(sessionId as string);
     });
   });
 
@@ -235,23 +251,29 @@ describe("Docker Execution", function () {
     });
 
     it("should use the specified network", async function () {
-      // Just verify the Docker command includes the network parameter
+      // Open a session for testing
+      const sessionId = openProject(projectName);
+      const workingDir = getWorkingDirForSession(sessionId as string);
+
       try {
+        // Just verify the Docker command includes the network parameter
         const { stdout } = await executeDockerCommand(
           projectName,
-          "echo 'Testing network connection'"
+          "echo 'Testing network connection'",
+          workingDir as string
         );
 
         // This just verifies the command succeeded - in a real scenario,
         // you would use services on the same network to verify connectivity
         expect(stdout).to.include("Testing network connection");
-
-        // Success means the network parameter was included
       } catch (error: unknown) {
         // If there's a network-related error, it will be caught here
         expect.fail(
           `Network connection test failed: ${(error as Error).message}`
         );
+      } finally {
+        // Close the session
+        closeSession(sessionId as string);
       }
     });
   });
@@ -271,33 +293,102 @@ describe("Docker Execution", function () {
       });
     });
 
-    it("should execute commands in copy mode without affecting original files", async function () {
-      // Create a test file that we'll modify
-      createTestFile(path.join(projectDir, "modify.txt"), "Original content");
+    it("should use a temporary directory when copy mode is enabled", async function () {
+      // Open a session for testing with copy mode
+      const sessionId = openProject(projectName);
+      expect(sessionId).to.not.equal(null);
 
-      // Execute a command that modifies the file
+      // Get the working directory from the session - should be a temp directory
+      const workingDir = getWorkingDirForSession(sessionId as string);
+      expect(workingDir).to.not.equal(projectDir); // Should be a different directory
+
+      // Verify the temp directory contains the test file
+      expect(
+        fs.existsSync(path.join(workingDir as string, "test.txt"))
+      ).to.equal(true);
+
+      // Execute a command that modifies a file in the temp directory
       await executeDockerCommand(
         projectName,
-        "echo 'Modified content' > /workspace/modify.txt"
+        "echo 'Modified content' > /workspace/test.txt",
+        workingDir as string
       );
+
+      // Verify the file in temp directory was modified
+      expect(
+        fs.readFileSync(path.join(workingDir as string, "test.txt"), "utf8")
+      ).to.include("Modified content");
 
       // Verify the original file was not modified
       expect(
-        verifyFileContent(
-          path.join(projectDir, "modify.txt"),
-          "Original content"
-        )
+        fs.readFileSync(path.join(projectDir, "test.txt"), "utf8")
+      ).to.equal("Hello from Docker test!");
+
+      // Create a new file in the temp directory
+      await executeDockerCommand(
+        projectName,
+        "echo 'New file' > /workspace/new-file.txt",
+        workingDir as string
+      );
+
+      // Verify the new file exists in temp directory
+      expect(
+        fs.existsSync(path.join(workingDir as string, "new-file.txt"))
       ).to.equal(true);
-    });
 
-    it("should clean up temporary files after command execution", async function () {
-      // Execute a command that creates a new file
-      await executeDockerCommand(projectName, "touch /workspace/newfile.txt");
-
-      // The file should not appear in the original directory
-      expect(fs.existsSync(path.join(projectDir, "newfile.txt"))).to.equal(
+      // Verify the new file doesn't exist in the original directory
+      expect(fs.existsSync(path.join(projectDir, "new-file.txt"))).to.equal(
         false
       );
+
+      // Close the session - should clean up the temp directory
+      closeSession(sessionId as string);
+
+      // Verify the temp directory has been cleaned up
+      expect(fs.existsSync(workingDir as string)).to.equal(false);
+    });
+
+    it("should create separate temp directories for different sessions of the same project", async function () {
+      // Open two sessions for the same project
+      const sessionId1 = openProject(projectName);
+      const sessionId2 = openProject(projectName);
+
+      const workingDir1 = getWorkingDirForSession(sessionId1 as string);
+      const workingDir2 = getWorkingDirForSession(sessionId2 as string);
+
+      // Verify they are different directories
+      expect(workingDir1).to.not.equal(workingDir2);
+
+      // Modify file in first session
+      await executeDockerCommand(
+        projectName,
+        "echo 'Modified in session 1' > /workspace/test.txt",
+        workingDir1 as string
+      );
+
+      // Modify file in second session
+      await executeDockerCommand(
+        projectName,
+        "echo 'Modified in session 2' > /workspace/test.txt",
+        workingDir2 as string
+      );
+
+      // Verify changes are isolated to each session
+      expect(
+        fs.readFileSync(path.join(workingDir1 as string, "test.txt"), "utf8")
+      ).to.include("Modified in session 1");
+      expect(
+        fs.readFileSync(path.join(workingDir2 as string, "test.txt"), "utf8")
+      ).to.include("Modified in session 2");
+
+      // Original file should be unchanged
+      expect(
+        fs.readFileSync(path.join(projectDir, "test.txt"), "utf8")
+      ).to.equal("Hello from Docker test!");
+
+      // Clean up
+      closeSession(sessionId1 as string);
+      closeSession(sessionId2 as string);
     });
   });
 });
