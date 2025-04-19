@@ -115,6 +115,7 @@ describe("Project MCP Tools", () => {
             name: "test-project",
             hostPath: projectPath,
             dockerImage: "node:18",
+            network: "test_network", // Added network parameter
           },
         ],
       });
@@ -135,6 +136,7 @@ describe("Project MCP Tools", () => {
       // Should not include path or Docker image
       expect(response.content[0].text).to.not.include(projectPath);
       expect(response.content[0].text).to.not.include("node:18");
+      expect(response.content[0].text).to.not.include("test_network");
     });
   });
 });

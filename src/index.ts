@@ -66,6 +66,11 @@ export async function main() {
                   describe:
                     "Path inside the container to mount the project (defaults to /workspace)",
                 })
+                .option("network", {
+                  type: "string",
+                  describe:
+                    "Docker network to connect the container to (for Docker Compose environments)",
+                })
                 .check((argv) => {
                   if (!argv.image && !argv.container) {
                     throw new Error(
@@ -83,6 +88,7 @@ export async function main() {
                   containerName: argv.container,
                   name: argv.name,
                   containerPath: argv.containerPath,
+                  network: argv.network,
                 },
                 { workingDir: process.cwd() }
               );

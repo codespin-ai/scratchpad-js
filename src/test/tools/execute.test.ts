@@ -27,17 +27,21 @@ function isDockerAvailable(): boolean {
 async function executeInDocker(
   projectDir: string,
   command: string,
-  dockerImage = "alpine:latest"
+  dockerImage = "alpine:latest",
+  networkParam = ""
 ): Promise<{
   stdout: string;
   stderr: string;
   status: number | null;
 }> {
   // Construct Docker command
+  const networkOption = networkParam ? [`--network=${networkParam}`] : [];
+
   const dockerCmd = [
     "docker",
     "run",
     "--rm",
+    ...networkOption,
     "-v",
     `${projectDir}:/workdir`,
     "-w",
@@ -75,6 +79,8 @@ describe("Execute Commands", function () {
   let toolRegistration: TestToolRegistration;
   const dockerImage = "alpine:latest";
   const projectName = "test-project";
+  const projectWithNetworkName = "test-project-with-network";
+  const testNetwork = "codebox-test-network";
 
   beforeEach(async function () {
     // Skip tests if Docker is not available
@@ -88,6 +94,14 @@ describe("Execute Commands", function () {
     if (pullResult.error || pullResult.status !== 0) {
       this.skip();
       return;
+    }
+
+    // Create a test network
+    try {
+      spawnSync("docker", ["network", "create", testNetwork]);
+    } catch (error) {
+      console.error(`Failed to create test network: ${error}`);
+      // Continue anyway
     }
 
     // Set up test environment
@@ -123,13 +137,22 @@ describe("Execute Commands", function () {
     fs.chmodSync(path.join(projectPath, "script.sh"), 0o755);
     fs.chmodSync(path.join(projectPath, "error.sh"), 0o755);
 
-    // Register project in system config with new format
+    // Register two projects in system config:
+    // 1. One without network
+    // 2. One with network
     createTestConfig(testDir, {
       projects: [
         {
           name: projectName,
           hostPath: projectPath,
           dockerImage: dockerImage,
+          // No network parameter
+        },
+        {
+          name: projectWithNetworkName,
+          hostPath: projectPath, // Same path, different project
+          dockerImage: dockerImage,
+          network: testNetwork, // With network parameter
         },
       ],
     });
@@ -146,8 +169,11 @@ describe("Execute Commands", function () {
           command: string;
         };
 
-        // In our test, we're only supporting one project
-        if (projectName !== "test-project") {
+        // Get proper network setting based on project name
+        let networkToUse = "";
+        if (projectName === projectWithNetworkName) {
+          networkToUse = testNetwork;
+        } else if (projectName !== "test-project") {
           return {
             isError: true,
             content: [
@@ -159,8 +185,13 @@ describe("Execute Commands", function () {
           };
         }
 
-        // Execute the command in Docker
-        const result = await executeInDocker(projectPath, command, dockerImage);
+        // Execute the command in Docker with or without network parameter
+        const result = await executeInDocker(
+          projectPath,
+          command,
+          dockerImage,
+          networkToUse
+        );
 
         // Format the output
         let output = result.stdout;
@@ -172,6 +203,7 @@ describe("Execute Commands", function () {
           content: [{ type: "text", text: output }],
           metadata: {
             status: result.status,
+            networkUsed: networkToUse || "none",
           },
         };
       }
@@ -191,8 +223,11 @@ describe("Execute Commands", function () {
           stopOnError?: boolean;
         };
 
-        // In our test, we're only supporting one project
-        if (projectName !== "test-project") {
+        // Get proper network setting based on project name
+        let networkToUse = "";
+        if (projectName === projectWithNetworkName) {
+          networkToUse = testNetwork;
+        } else if (projectName !== "test-project") {
           return {
             isError: true,
             content: [
@@ -212,7 +247,8 @@ describe("Execute Commands", function () {
           const result = await executeInDocker(
             projectPath,
             command,
-            dockerImage
+            dockerImage,
+            networkToUse
           );
 
           // Format output for this command
@@ -253,6 +289,7 @@ describe("Execute Commands", function () {
           metadata: {
             results,
             hasError,
+            networkUsed: networkToUse || "none",
           },
         };
       }
@@ -265,6 +302,13 @@ describe("Execute Commands", function () {
       _setHomeDir(originalHomeDir as () => string);
     }
 
+    // Try to clean up the test network
+    try {
+      spawnSync("docker", ["network", "rm", testNetwork]);
+    } catch (error) {
+      console.error(`Error cleaning up network: ${error}`);
+    }
+
     // Clean up test environment
     if (testDir) {
       cleanupTestEnvironment(testDir);
@@ -272,14 +316,32 @@ describe("Execute Commands", function () {
   });
 
   describe("execute_command", function () {
-    it("should execute a basic command", async function () {
+    it("should execute a basic command (without network)", async function () {
       const response = (await toolRegistration.callTool("execute_command", {
-        projectName: projectName,
+        projectName: projectName, // Project without network
         command: "cat test.txt",
-      })) as { content: { text: string }[]; metadata: { status: number } };
+      })) as {
+        content: { text: string }[];
+        metadata: { status: number; networkUsed: string };
+      };
 
       expect(response.content[0].text).to.equal("Hello, world!");
       expect(response.metadata.status).to.equal(0);
+      expect(response.metadata.networkUsed).to.equal("none");
+    });
+
+    it("should execute a basic command (with network)", async function () {
+      const response = (await toolRegistration.callTool("execute_command", {
+        projectName: projectWithNetworkName, // Project with network
+        command: "cat test.txt",
+      })) as {
+        content: { text: string }[];
+        metadata: { status: number; networkUsed: string };
+      };
+
+      expect(response.content[0].text).to.equal("Hello, world!");
+      expect(response.metadata.status).to.equal(0);
+      expect(response.metadata.networkUsed).to.equal(testNetwork);
     });
 
     it("should handle command errors", async function () {
@@ -322,21 +384,48 @@ describe("Execute Commands", function () {
   });
 
   describe("execute_batch_commands", function () {
-    it("should execute multiple commands in sequence", async function () {
+    it("should execute multiple commands in sequence (without network)", async function () {
       const response = (await toolRegistration.callTool(
         "execute_batch_commands",
         {
-          projectName: projectName,
+          projectName: projectName, // Project without network
           commands: ["cat test.txt", "cat test2.txt"],
         }
       )) as {
         content: { text: string }[];
-        metadata: { hasError: boolean; results: unknown[] };
+        metadata: {
+          hasError: boolean;
+          results: unknown[];
+          networkUsed: string;
+        };
       };
 
       expect(response.content[0].text).to.include("Hello, world!");
       expect(response.content[0].text).to.include("Another test file");
       expect(response.metadata.hasError).to.equal(false);
+      expect(response.metadata.networkUsed).to.equal("none");
+    });
+
+    it("should execute multiple commands in sequence (with network)", async function () {
+      const response = (await toolRegistration.callTool(
+        "execute_batch_commands",
+        {
+          projectName: projectWithNetworkName, // Project with network
+          commands: ["cat test.txt", "cat test2.txt"],
+        }
+      )) as {
+        content: { text: string }[];
+        metadata: {
+          hasError: boolean;
+          results: unknown[];
+          networkUsed: string;
+        };
+      };
+
+      expect(response.content[0].text).to.include("Hello, world!");
+      expect(response.content[0].text).to.include("Another test file");
+      expect(response.metadata.hasError).to.equal(false);
+      expect(response.metadata.networkUsed).to.equal(testNetwork);
     });
 
     it("should continue execution after errors by default", async function () {
@@ -404,6 +493,45 @@ describe("Execute Commands", function () {
       expect(response.isError).to.equal(true);
       expect(response.content[0].text).to.include(
         "Invalid or unregistered project"
+      );
+    });
+  });
+
+  // Network-specific tests
+  describe("network functionality", function () {
+    it("should work with and without network parameter", async function () {
+      // This test specifically verifies the difference between network and no-network
+      // environments. In a real use case, we would add a container on the network
+      // and test communication, but for unit tests this is sufficient.
+
+      // Execute with network
+      const withNetworkResponse = (await toolRegistration.callTool(
+        "execute_command",
+        {
+          projectName: projectWithNetworkName,
+          command: "echo 'Test with network'",
+        }
+      )) as { content: { text: string }[]; metadata: { networkUsed: string } };
+
+      // Execute without network
+      const withoutNetworkResponse = (await toolRegistration.callTool(
+        "execute_command",
+        {
+          projectName: projectName,
+          command: "echo 'Test without network'",
+        }
+      )) as { content: { text: string }[]; metadata: { networkUsed: string } };
+
+      // Verify both work correctly with proper network settings
+      expect(withNetworkResponse.metadata.networkUsed).to.equal(testNetwork);
+      expect(withoutNetworkResponse.metadata.networkUsed).to.equal("none");
+
+      // Verify both commands executed successfully
+      expect(withNetworkResponse.content[0].text).to.include(
+        "Test with network"
+      );
+      expect(withoutNetworkResponse.content[0].text).to.include(
+        "Test without network"
       );
     });
   });

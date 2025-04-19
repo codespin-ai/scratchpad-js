@@ -14,6 +14,7 @@ interface ProjectOptions {
   containerName?: string;
   name?: string;
   containerPath?: string;
+  network?: string; // Added network option
 }
 
 interface CommandContext {
@@ -57,7 +58,14 @@ export async function addProject(
   options: ProjectOptions,
   context: CommandContext
 ): Promise<void> {
-  const { dirname = ".", image, containerName, name, containerPath } = options;
+  const {
+    dirname = ".",
+    image,
+    containerName,
+    name,
+    containerPath,
+    network,
+  } = options;
 
   if (!image && !containerName) {
     throw new Error(
@@ -98,6 +106,24 @@ export async function addProject(
     }
   }
 
+  // Verify network exists if specified
+  if (network) {
+    try {
+      const { stdout } = await execAsync(
+        `docker network inspect ${network} --format "{{.Name}}"`
+      );
+      if (!stdout.trim()) {
+        console.warn(
+          `Warning: Network '${network}' not found. Commands may fail until network is available.`
+        );
+      }
+    } catch (_error) {
+      console.warn(
+        `Warning: Could not verify network '${network}'. Make sure Docker is running.`
+      );
+    }
+  }
+
   // Get existing config
   const config = getConfig();
 
@@ -117,6 +143,9 @@ export async function addProject(
     if (containerPath) {
       config.projects[existingIndex].containerPath = containerPath;
     }
+    if (network) {
+      config.projects[existingIndex].network = network;
+    }
     config.projects[existingIndex].hostPath = projectPath;
     saveConfig(config);
     console.log(`Updated project: ${projectName}`);
@@ -128,6 +157,7 @@ export async function addProject(
       ...(containerPath && { containerPath }),
       ...(image && { dockerImage: image }),
       ...(containerName && { containerName }),
+      ...(network && { network }),
     });
     saveConfig(config);
     console.log(`Added project: ${projectName}`);
@@ -214,6 +244,10 @@ export async function listProjects(): Promise<void> {
 
     if (project.containerPath) {
       console.log(`   Container Path: ${project.containerPath}`);
+    }
+
+    if (project.network) {
+      console.log(`   Docker Network: ${project.network}`);
     }
 
     console.log();

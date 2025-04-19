@@ -7,18 +7,29 @@ describe("Project Configuration Structure", () => {
     // Example of what our config should look like
     const config = {
       projects: [
-        { path: "/path/to/project1", dockerImage: "node:18" },
-        { path: "/path/to/project2", dockerImage: "python:3.9" },
+        {
+          name: "project1",
+          hostPath: "/path/to/project1",
+          dockerImage: "node:18",
+          network: "my_compose_network",
+        },
+        {
+          name: "project2",
+          hostPath: "/path/to/project2",
+          dockerImage: "python:3.9",
+        },
       ],
       debug: false,
     };
 
     // Check that this is a valid configuration format
     expect(config).to.have.property("projects").that.is.an("array");
-    expect(config.projects[0]).to.have.property("path").that.is.a("string");
+    expect(config.projects[0]).to.have.property("hostPath").that.is.a("string");
+    expect(config.projects[0]).to.have.property("name").that.is.a("string");
     expect(config.projects[0])
       .to.have.property("dockerImage")
       .that.is.a("string");
+    expect(config.projects[0]).to.have.property("network").that.is.a("string");
     expect(config).to.have.property("debug").that.is.a("boolean");
   });
 

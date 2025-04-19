@@ -169,12 +169,16 @@ export async function executeInContainer(
       // Use regular Docker container with image
       const imageToUse = dockerImage || project.dockerImage;
       const containerPath = project.containerPath || "/workspace";
+      const networkParam = project.network
+        ? `--network="${project.network}"`
+        : "";
 
       if (!imageToUse) {
         throw new Error("No Docker image configured for this project");
       }
 
       const dockerCommand = `docker run -i --rm \
+      ${networkParam} \
       -v "${project.hostPath}:${containerPath}" \
       --workdir="${containerPath}" \
       --user=${uid}:${gid} \

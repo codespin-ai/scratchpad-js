@@ -5,6 +5,7 @@ export interface ProjectConfig {
   containerPath?: string;
   dockerImage?: string;
   containerName?: string;
+  network?: string;
 }
 
 export interface SystemConfig {
