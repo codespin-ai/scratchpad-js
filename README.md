@@ -23,12 +23,12 @@ For LibreChat, it'll be:
 ```yaml
 mcpServers:
   codebox:
-      type: stdio
-      command: codebox
-      args:
-        - start
-      timeout: 30000             # 30 second timeout for commands
-      initTimeout: 10000         # 10 second timeout for initialization
+    type: stdio
+    command: codebox
+    args:
+      - start
+    timeout: 30000 # 30 second timeout for commands
+    initTimeout: 10000 # 10 second timeout for initialization
 ```
 
 ### Managing Projects
@@ -55,6 +55,10 @@ codebox project add --image node:18 --network my_compose_network
 
 # Use a running container instead of a new container
 codebox project add --container my-running-container
+
+# Enable copy mode to isolate file changes from your source directory
+# (Only works with --image, not with --container)
+codebox project add --image node:18 --copy
 ```
 
 #### Listing Projects
@@ -100,7 +104,8 @@ Projects are stored in `~/.codespin/codebox.json` with the following structure:
       "hostPath": "/home/user/projects/my-node-app",
       "containerPath": "/my-project",
       "dockerImage": "node:18",
-      "network": "my_compose_network"
+      "network": "my_compose_network",
+      "copy": true
     },
     {
       "name": "python-api",
@@ -120,6 +125,25 @@ Each project has:
 - `dockerImage`: Docker image to use for new containers
 - `containerName`: Name of an existing running container
 - `network`: (Optional) Docker network to connect the container to
+- `copy`: (Optional) When true, files are copied to a temporary directory before mounting, protecting your source files
+
+## Copy Mode
+
+When you enable copy mode with `--copy`, Codebox will:
+
+1. Create a temporary copy of your project directory
+2. Mount this temporary copy in the container instead of your original files
+3. Run commands on the copy, so your original source files are never modified
+4. Clean up the temporary directory after command execution
+
+This is useful for:
+
+- Testing destructive operations safely
+- Preventing accidental modifications to your source code
+- Executing commands that might create temporary or build files
+- Avoiding permission issues with mounted volumes
+
+**Note:** Copy mode only works when using Docker images (with `--image`), not with existing containers (with `--container`). When using an existing container, the copy option is ignored.
 
 ## Troubleshooting
 

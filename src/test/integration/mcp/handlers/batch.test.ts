@@ -196,5 +196,41 @@ describe("Batch Command Handlers", function () {
         "Invalid or unregistered project"
       );
     });
+
+    it("should execute batch commands with copy mode enabled", async function () {
+      // Register a project with copy mode enabled - use dockerImage instead of containerName
+      createTestConfig(configDir, {
+        projects: [
+          {
+            name: "copy-project",
+            hostPath: projectDir,
+            dockerImage: dockerImage, // Use image instead of container for copy mode
+            copy: true,
+          },
+        ],
+      });
+
+      // Create a file we'll try to modify
+      const outputFile = path.join(projectDir, "copy-output.txt");
+      fs.writeFileSync(outputFile, "Original content");
+
+      const response = await executeBatchCommandsHandler({
+        projectName: "copy-project",
+        commands: [
+          "echo 'Modified in batch' > /workspace/copy-output.txt",
+          "echo 'Added new line' >> /workspace/copy-output.txt",
+          "cat /workspace/copy-output.txt",
+        ],
+      });
+
+      // Verify the command output shows the modified content
+      expect(response.isError).to.equal(undefined);
+      expect(response.content[0].text).to.include("Modified in batch");
+      expect(response.content[0].text).to.include("Added new line");
+
+      // But the original file should remain unchanged
+      const originalContent = fs.readFileSync(outputFile, "utf8");
+      expect(originalContent).to.equal("Original content");
+    });
   });
 });

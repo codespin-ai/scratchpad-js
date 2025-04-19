@@ -71,6 +71,12 @@ export async function main() {
                   describe:
                     "Docker network to connect the container to (for Docker Compose environments)",
                 })
+                .option("copy", {
+                  type: "boolean",
+                  describe:
+                    "Copy project files to a temporary directory before mounting",
+                  default: false,
+                })
                 .check((argv) => {
                   if (!argv.image && !argv.container) {
                     throw new Error(
@@ -89,6 +95,7 @@ export async function main() {
                   name: argv.name,
                   containerPath: argv.containerPath,
                   network: argv.network,
+                  copy: argv.copy,
                 },
                 { workingDir: process.cwd() }
               );

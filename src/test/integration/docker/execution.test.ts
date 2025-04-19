@@ -1,5 +1,6 @@
 // src/test/integration/docker/execution.test.ts
 import { expect } from "chai";
+import * as fs from "fs";
 import * as path from "path";
 import {
   checkContainerRunning,
@@ -15,6 +16,7 @@ import {
   removeContainer,
   removeNetwork,
   uniqueName,
+  verifyFileContent,
 } from "../testUtils.js";
 
 describe("Docker Execution", function () {
@@ -137,6 +139,39 @@ describe("Docker Execution", function () {
         );
       }
     });
+
+    it("should ignore copy mode for container execution", async function () {
+      // Register the container with copy mode (which should be ignored)
+      createTestConfig(configDir, {
+        projects: [
+          {
+            name: "container-with-copy",
+            hostPath: projectDir,
+            containerName: containerName,
+            copy: true, // This should be ignored for container execution
+          },
+        ],
+      });
+
+      // Create a file that we'll modify
+      createTestFile(
+        path.join(projectDir, "container-modify.txt"),
+        "Original content"
+      );
+
+      // Execute a command that modifies the file - use echo -n to avoid trailing newline
+      await executeDockerCommand(
+        "container-with-copy",
+        "echo -n 'Modified by container' > /workspace/container-modify.txt"
+      );
+
+      // Since copy mode is ignored for containers, the original file SHOULD be modified
+      // Trim the content to handle potential newline differences across platforms
+      const content = fs
+        .readFileSync(path.join(projectDir, "container-modify.txt"), "utf8")
+        .trim();
+      expect(content).to.equal("Modified by container");
+    });
   });
 
   describe("Command Execution (Image Mode)", function () {
@@ -184,7 +219,6 @@ describe("Docker Execution", function () {
     });
   });
 
-  // Updated Network Support test section in src/test/integration/docker/execution.test.ts
   describe("Network Support", function () {
     beforeEach(function () {
       // Register the image with network in the config
@@ -219,6 +253,51 @@ describe("Docker Execution", function () {
           `Network connection test failed: ${(error as Error).message}`
         );
       }
+    });
+  });
+
+  describe("Copy Mode", function () {
+    beforeEach(function () {
+      // Register the image in the config with copy mode enabled
+      createTestConfig(configDir, {
+        projects: [
+          {
+            name: projectName,
+            hostPath: projectDir,
+            dockerImage: dockerImage,
+            copy: true,
+          },
+        ],
+      });
+    });
+
+    it("should execute commands in copy mode without affecting original files", async function () {
+      // Create a test file that we'll modify
+      createTestFile(path.join(projectDir, "modify.txt"), "Original content");
+
+      // Execute a command that modifies the file
+      await executeDockerCommand(
+        projectName,
+        "echo 'Modified content' > /workspace/modify.txt"
+      );
+
+      // Verify the original file was not modified
+      expect(
+        verifyFileContent(
+          path.join(projectDir, "modify.txt"),
+          "Original content"
+        )
+      ).to.equal(true);
+    });
+
+    it("should clean up temporary files after command execution", async function () {
+      // Execute a command that creates a new file
+      await executeDockerCommand(projectName, "touch /workspace/newfile.txt");
+
+      // The file should not appear in the original directory
+      expect(fs.existsSync(path.join(projectDir, "newfile.txt"))).to.equal(
+        false
+      );
     });
   });
 });

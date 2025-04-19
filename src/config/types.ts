@@ -6,6 +6,7 @@ export interface ProjectConfig {
   dockerImage?: string;
   containerName?: string;
   network?: string;
+  copy?: boolean;
 }
 
 export interface SystemConfig {

@@ -2,10 +2,7 @@ import { exec } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import { promisify } from "util";
-import {
-  getConfig,
-  saveConfig
-} from "../../config/projectConfig.js";
+import { getConfig, saveConfig } from "../../config/projectConfig.js";
 import { validateDirectory } from "../../fs/pathValidation.js";
 
 const execAsync = promisify(exec);
@@ -18,6 +15,7 @@ interface ProjectOptions {
   name?: string;
   containerPath?: string;
   network?: string;
+  copy?: boolean; // Added new option
 }
 
 interface CommandContext {
@@ -28,7 +26,15 @@ export async function addProject(
   options: ProjectOptions,
   context: CommandContext
 ): Promise<void> {
-  const { dirname = ".", image, containerName, name, containerPath, network } = options;
+  const {
+    dirname = ".",
+    image,
+    containerName,
+    name,
+    containerPath,
+    network,
+    copy = false, // Default to false
+  } = options;
 
   if (!image && !containerName) {
     throw new Error(
@@ -103,6 +109,8 @@ export async function addProject(
     if (network) {
       config.projects[existingIndex].network = network;
     }
+    // Update copy setting
+    config.projects[existingIndex].copy = copy;
     config.projects[existingIndex].hostPath = projectPath;
     saveConfig(config);
     console.log(`Updated project: ${projectName}`);
@@ -115,6 +123,7 @@ export async function addProject(
       ...(image && { dockerImage: image }),
       ...(containerName && { containerName }),
       ...(network && { network }),
+      ...(copy && { copy: true }),
     });
     saveConfig(config);
     console.log(`Added project: ${projectName}`);
@@ -202,9 +211,14 @@ export async function listProjects(): Promise<void> {
     if (project.containerPath) {
       console.log(`   Container Path: ${project.containerPath}`);
     }
-    
+
     if (project.network) {
       console.log(`   Docker Network: ${project.network}`);
+    }
+
+    // Show copy setting if enabled
+    if (project.copy) {
+      console.log(`   Copy Files: Yes`);
     }
 
     console.log();

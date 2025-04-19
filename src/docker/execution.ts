@@ -2,6 +2,11 @@
 import { exec } from "child_process";
 import { promisify } from "util";
 import { getProjectByName } from "../config/projectConfig.js";
+import {
+  createTempDirectory,
+  copyDirectory,
+  removeDirectory,
+} from "../fs/dirUtils.js";
 
 const execAsync = promisify(exec);
 
@@ -31,19 +36,30 @@ export async function executeDockerCommand(
     throw new Error(`Project not registered: ${projectName}`);
   }
 
+  // Initialize tempDir as undefined
+  let tempDir: string | undefined = undefined;
+
   try {
+    // If copy mode is enabled AND we're using a Docker image (not an existing container)
+    // Only create temp directory for image-based execution, not for container execution
+    if (project.copy && project.dockerImage) {
+      tempDir = createTempDirectory(`codebox-${projectName}-`);
+      copyDirectory(project.hostPath, tempDir);
+    }
+
     if (project.containerName) {
-      // Execute in existing container
+      // Execute in existing container - don't use the temp directory for container execution
       return await executeInExistingContainer(
         project.containerName,
         command,
         project.containerPath
       );
     } else if (project.dockerImage) {
-      // Execute in new container from image
+      // Execute in new container from image - use the temp directory if copy is enabled
+      const sourceDir = tempDir || project.hostPath;
       return await executeWithDockerImage(
         project.dockerImage,
-        project.hostPath,
+        sourceDir,
         command,
         project.containerPath,
         project.network
@@ -63,6 +79,15 @@ export async function executeDockerCommand(
         (error as Error).message ? (error as Error).message + "\n" : ""
       }${combinedOutput}`
     );
+  } finally {
+    // Clean up temporary directory if it was created
+    if (tempDir) {
+      try {
+        removeDirectory(tempDir);
+      } catch (error) {
+        console.error(`Error cleaning up temporary directory: ${error}`);
+      }
+    }
   }
 }
 
