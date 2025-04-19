@@ -24,6 +24,7 @@ export default tseslint.config(
           caughtErrorsIgnorePattern: "^_",
         },
       ],
+      "@typescript-eslint/no-dynamic-delete": ["off"],
     },
   }
 );

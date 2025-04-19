@@ -20,7 +20,6 @@ interface McpResponse {
 type RequestHandler = (args: Record<string, unknown>) => Promise<McpResponse>;
 
 describe("File Handlers with Sessions", function () {
-  let testDir: string;
   let configDir: string;
   let projectDir: string;
   let cleanup: () => void;
@@ -31,7 +30,6 @@ describe("File Handlers with Sessions", function () {
   beforeEach(function () {
     // Setup test environment
     const env = setupTestEnvironment();
-    testDir = env.testDir;
     configDir = env.configDir;
     projectDir = env.projectDir;
     cleanup = env.cleanup;

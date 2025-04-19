@@ -29,7 +29,6 @@ type RequestHandler = (args: Record<string, unknown>) => Promise<McpResponse>;
 describe("Execute Handlers with Sessions", function () {
   this.timeout(30000); // Docker operations can be slow
 
-  let testDir: string;
   let configDir: string;
   let projectDir: string;
   let cleanup: () => void;
@@ -58,7 +57,6 @@ describe("Execute Handlers with Sessions", function () {
 
     // Setup test environment
     const env = setupTestEnvironment();
-    testDir = env.testDir;
     configDir = env.configDir;
     projectDir = env.projectDir;
     cleanup = env.cleanup;

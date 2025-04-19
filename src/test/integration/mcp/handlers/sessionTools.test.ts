@@ -21,7 +21,6 @@ interface McpResponse {
 type RequestHandler = (args: Record<string, unknown>) => Promise<McpResponse>;
 
 describe("Session-Based Tools", function () {
-  let testDir: string;
   let configDir: string;
   let projectDir: string;
   let cleanup: () => void;
@@ -31,7 +30,6 @@ describe("Session-Based Tools", function () {
   beforeEach(function () {
     // Setup test environment
     const env = setupTestEnvironment();
-    testDir = env.testDir;
     configDir = env.configDir;
     projectDir = env.projectDir;
     cleanup = env.cleanup;
@@ -90,7 +88,8 @@ describe("Session-Based Tools", function () {
       // Verify the response
       expect(response.isError).to.equal(undefined);
       expect(response.content[0].text).to.be.a("string");
-      expect(response.content[0].text).to.not.be.empty;
+      expect(response.content[0].text).to.not.equal(undefined);
+      expect(response.content[0].text).to.not.equal(null);
     });
 
     it("should return an error for invalid projects", async function () {

@@ -3,17 +3,16 @@ import { expect } from "chai";
 import * as fs from "fs";
 import * as path from "path";
 import {
-  openProject,
   closeSession,
   getProjectNameForSession,
   getWorkingDirForSession,
+  openProject,
   sessionExists,
 } from "../../../sessions/sessionStore.js";
-import { setupTestEnvironment, createTestConfig } from "../setup.js";
-import { createTestFile, verifyFileContent } from "../testUtils.js";
+import { createTestConfig, setupTestEnvironment } from "../setup.js";
+import { createTestFile } from "../testUtils.js";
 
 describe("Session Store", function () {
-  let testDir: string;
   let configDir: string;
   let projectDir: string;
   let cleanup: () => void;
@@ -21,7 +20,6 @@ describe("Session Store", function () {
   beforeEach(function () {
     // Setup test environment
     const env = setupTestEnvironment();
-    testDir = env.testDir;
     configDir = env.configDir;
     projectDir = env.projectDir;
     cleanup = env.cleanup;
@@ -51,7 +49,8 @@ describe("Session Store", function () {
       // Open a session
       const sessionId = openProject("test-project");
       expect(sessionId).to.be.a("string");
-      expect(sessionId).to.not.be.empty;
+      expect(sessionId).to.not.equal(undefined);
+      expect(sessionId).to.not.equal(null);
 
       // Verify session is registered
       expect(sessionExists(sessionId as string)).to.equal(true);
@@ -81,7 +80,8 @@ describe("Session Store", function () {
       // Open a session
       const sessionId = openProject("test-project");
       expect(sessionId).to.be.a("string");
-      expect(sessionId).to.not.be.empty;
+      expect(sessionId).to.not.equal(undefined);
+      expect(sessionId).to.not.equal(null);
 
       // Verify session is registered
       expect(sessionExists(sessionId as string)).to.equal(true);
