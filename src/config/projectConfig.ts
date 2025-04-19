@@ -1,8 +1,8 @@
 // src/config/projectConfig.ts
 import * as fs from "fs";
-import * as path from "path";
 import * as os from "os";
-import { SystemConfig, ProjectConfig } from "./types.js";
+import * as path from "path";
+import { ProjectConfig, SystemConfig } from "./types.js";
 
 // Configurable base path for testing
 let configBasePath = os.homedir();
@@ -49,7 +49,7 @@ export function getConfig(): SystemConfig {
       projects: Array.isArray(data.projects) ? data.projects : [],
       debug: data.debug,
     };
-  } catch (error) {
+  } catch {
     console.error("Failed to parse config file, creating new one");
     return { projects: [] };
   }

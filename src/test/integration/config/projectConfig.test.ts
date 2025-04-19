@@ -4,18 +4,17 @@ import * as fs from "fs";
 import * as path from "path";
 import {
   getConfig,
-  saveConfig,
-  getProjectByName,
-  validateProjectName,
-  validateProject,
   getConfigFilePath,
+  getProjectByName,
   isDebugEnabled,
+  saveConfig,
+  validateProject,
+  validateProjectName,
 } from "../../../config/projectConfig.js";
-import { setupTestEnvironment, createTestConfig } from "../setup.js";
+import { setupTestEnvironment } from "../setup.js";
 
 describe("Project Configuration", function () {
   let testDir: string;
-  let configDir: string;
   let projectDir: string;
   let cleanup: () => void;
 
@@ -23,7 +22,6 @@ describe("Project Configuration", function () {
     // Setup test environment
     const env = setupTestEnvironment();
     testDir = env.testDir;
-    configDir = env.configDir;
     projectDir = env.projectDir;
     cleanup = env.cleanup;
   });
@@ -55,7 +53,7 @@ describe("Project Configuration", function () {
 
       // Verify file was created
       const configFile = getConfigFilePath();
-      expect(fs.existsSync(configFile)).to.be.true;
+      expect(fs.existsSync(configFile)).to.equal(true);
 
       // Read back the config
       const readConfig = getConfig();
@@ -79,12 +77,12 @@ describe("Project Configuration", function () {
 
       // Test getProjectByName
       const project = getProjectByName("test-project");
-      expect(project).to.not.be.null;
+      expect(project).to.not.equal(null);
       expect(project?.name).to.equal("test-project");
 
       // Test non-existent project
       const nonExistent = getProjectByName("non-existent");
-      expect(nonExistent).to.be.null;
+      expect(nonExistent).to.equal(null);
     });
 
     it("should validate project names", function () {
@@ -101,8 +99,8 @@ describe("Project Configuration", function () {
       saveConfig(testConfig);
 
       // Test validateProjectName
-      expect(validateProjectName("test-project")).to.be.true;
-      expect(validateProjectName("non-existent")).to.be.false;
+      expect(validateProjectName("test-project")).to.equal(true);
+      expect(validateProjectName("non-existent")).to.equal(false);
     });
 
     it("should validate project directories", function () {
@@ -123,16 +121,16 @@ describe("Project Configuration", function () {
       fs.mkdirSync(nestedPath, { recursive: true });
 
       // Test validateProject with various paths
-      expect(validateProject(projectDir)).to.be.true;
-      expect(validateProject(nestedPath)).to.be.true;
-      expect(validateProject(testDir)).to.be.false;
+      expect(validateProject(projectDir)).to.equal(true);
+      expect(validateProject(nestedPath)).to.equal(true);
+      expect(validateProject(testDir)).to.equal(false);
     });
   });
 
   describe("Debug Mode", function () {
     it("should detect debug mode from config", function () {
       // Initially, debug should be off
-      expect(isDebugEnabled()).to.be.false;
+      expect(isDebugEnabled()).to.equal(false);
 
       // Create config with debug: true
       const testConfig = {
@@ -142,7 +140,7 @@ describe("Project Configuration", function () {
       saveConfig(testConfig);
 
       // Now debug should be detected as enabled
-      expect(isDebugEnabled()).to.be.true;
+      expect(isDebugEnabled()).to.equal(true);
     });
   });
 });

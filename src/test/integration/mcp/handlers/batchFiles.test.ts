@@ -6,13 +6,20 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerBatchFileHandlers } from "../../../../mcp/handlers/batchFiles.js";
 import { setupTestEnvironment, createTestConfig } from "../../setup.js";
 
-// Mock request handler type
-interface RequestHandler {
-  (args: Record<string, any>): Promise<any>;
+// Response type for MCP tools
+interface McpResponse {
+  isError?: boolean;
+  content: {
+    type: string;
+    text: string;
+  }[];
 }
 
+// Mock request handler type
+type RequestHandler = (args: Record<string, unknown>) => Promise<McpResponse>;
+
 describe("Batch File Handlers", function () {
-  let testDir: string;
+  let _testDir: string;
   let configDir: string;
   let projectDir: string;
   let cleanup: () => void;
@@ -21,7 +28,7 @@ describe("Batch File Handlers", function () {
   beforeEach(function () {
     // Setup test environment
     const env = setupTestEnvironment();
-    testDir = env.testDir;
+    _testDir = env.testDir;
     configDir = env.configDir;
     projectDir = env.projectDir;
     cleanup = env.cleanup;
@@ -43,10 +50,10 @@ describe("Batch File Handlers", function () {
         name: string,
         description: string,
         schema: object,
-        handler: any
+        handler: unknown
       ) => {
         if (name === "write_batch_files") {
-          writeBatchFilesHandler = handler;
+          writeBatchFilesHandler = handler as RequestHandler;
         }
       },
     } as unknown as McpServer;
@@ -80,15 +87,15 @@ describe("Batch File Handlers", function () {
 
       // Allow for both undefined and false as valid success indicators
       // This is more flexible and works with different handler implementations
-      expect(response.isError || false).to.be.false;
+      expect(response.isError || false).to.equal(false);
       expect(response.content[0].text).to.include("Successfully wrote file");
 
       // Verify files were created
       const file1Path = path.join(projectDir, "file1.txt");
       const file2Path = path.join(projectDir, "nested/file2.txt");
 
-      expect(fs.existsSync(file1Path)).to.be.true;
-      expect(fs.existsSync(file2Path)).to.be.true;
+      expect(fs.existsSync(file1Path)).to.equal(true);
+      expect(fs.existsSync(file2Path)).to.equal(true);
 
       expect(fs.readFileSync(file1Path, "utf8")).to.equal("Content for file 1");
       expect(fs.readFileSync(file2Path, "utf8")).to.equal("Content for file 2");
@@ -117,7 +124,7 @@ describe("Batch File Handlers", function () {
       });
 
       // Verify the error response
-      expect(response.isError).to.be.true;
+      expect(response.isError).to.equal(true);
       expect(response.content[0].text).to.include("Failed");
       expect(response.content[0].text).to.include("Invalid file path");
 
@@ -172,7 +179,7 @@ describe("Batch File Handlers", function () {
       });
 
       // Verify the error response
-      expect(response.isError).to.be.true;
+      expect(response.isError).to.equal(true);
       expect(response.content[0].text).to.include(
         "Invalid or unregistered project"
       );

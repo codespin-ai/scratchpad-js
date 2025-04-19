@@ -4,17 +4,17 @@ import { createServer } from "../../../mcp/server.js";
 import { setupTestEnvironment } from "../setup.js";
 
 describe("MCP Server", function () {
-  let testDir: string;
-  let configDir: string;
-  let projectDir: string;
+  let _testDir: string;
+  let _configDir: string;
+  let _projectDir: string;
   let cleanup: () => void;
 
   beforeEach(function () {
     // Setup test environment
     const env = setupTestEnvironment();
-    testDir = env.testDir;
-    configDir = env.configDir;
-    projectDir = env.projectDir;
+    _testDir = env.testDir;
+    _configDir = env.configDir;
+    _projectDir = env.projectDir;
     cleanup = env.cleanup;
   });
 
@@ -29,7 +29,7 @@ describe("MCP Server", function () {
 
       // Since we can't access internal properties directly,
       // let's use type checking to verify the server
-      expect(server).to.exist;
+      expect(server).to.not.equal(null);
       expect(server).to.have.property("tool").that.is.a("function");
       expect(server).to.have.property("connect").that.is.a("function");
     });

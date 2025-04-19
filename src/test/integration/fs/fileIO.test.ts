@@ -10,14 +10,12 @@ import {
 import { setupTestEnvironment } from "../setup.js";
 
 describe("File I/O Operations", function() {
-  let testDir: string;
   let projectDir: string;
   let cleanup: () => void;
 
   beforeEach(function() {
     // Setup test environment
     const env = setupTestEnvironment();
-    testDir = env.testDir;
     projectDir = env.projectDir;
     cleanup = env.cleanup;
   });
@@ -35,7 +33,7 @@ describe("File I/O Operations", function() {
       writeProjectFile(projectDir, filePath, content);
       
       const fullPath = path.join(projectDir, filePath);
-      expect(fs.existsSync(fullPath)).to.be.true;
+      expect(fs.existsSync(fullPath)).to.equal(true);
       expect(fs.readFileSync(fullPath, "utf8")).to.equal(content);
     });
 
@@ -46,7 +44,7 @@ describe("File I/O Operations", function() {
       writeProjectFile(projectDir, filePath, content);
       
       const fullPath = path.join(projectDir, filePath);
-      expect(fs.existsSync(fullPath)).to.be.true;
+      expect(fs.existsSync(fullPath)).to.equal(true);
       expect(fs.readFileSync(fullPath, "utf8")).to.equal(content);
     });
 
@@ -112,19 +110,19 @@ describe("File I/O Operations", function() {
       const fullPath = path.join(projectDir, filePath);
       fs.writeFileSync(fullPath, "test content", "utf8");
       
-      expect(projectFileExists(projectDir, filePath)).to.be.true;
+      expect(projectFileExists(projectDir, filePath)).to.equal(true);
     });
 
     it("should return false for non-existent files", function() {
       const filePath = "not-exists.txt";
       
-      expect(projectFileExists(projectDir, filePath)).to.be.false;
+      expect(projectFileExists(projectDir, filePath)).to.equal(false);
     });
 
     it("should return false for paths outside the project directory", function() {
       const filePath = "../outside.txt";
       
-      expect(projectFileExists(projectDir, filePath)).to.be.false;
+      expect(projectFileExists(projectDir, filePath)).to.equal(false);
     });
   });
 });

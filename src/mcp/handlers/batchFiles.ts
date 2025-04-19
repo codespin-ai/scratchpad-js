@@ -149,11 +149,11 @@ export function registerBatchFileHandlers(server: McpServer): void {
  * Format batch operation results for output
  */
 function formatResults(
-  results: Array<{
+  results: {
     filePath: string;
     success: boolean;
     message: string;
-  }>
+  }[]
 ): string {
   return results
     .map((result) => {

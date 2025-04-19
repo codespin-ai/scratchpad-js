@@ -13,15 +13,22 @@ import {
   createTestFile,
 } from "../../testUtils.js";
 
-// Mock request handler type
-interface RequestHandler {
-  (args: Record<string, any>): Promise<any>;
+// Response type for MCP tools
+interface McpResponse {
+  isError?: boolean;
+  content: {
+    type: string;
+    text: string;
+  }[];
 }
+
+// Mock request handler type
+type RequestHandler = (args: Record<string, unknown>) => Promise<McpResponse>;
 
 describe("Batch Command Handlers", function () {
   this.timeout(30000); // Docker operations can be slow
 
-  let testDir: string;
+  let _testDir: string;
   let configDir: string;
   let projectDir: string;
   let cleanup: () => void;
@@ -48,7 +55,7 @@ describe("Batch Command Handlers", function () {
 
     // Setup test environment
     const env = setupTestEnvironment();
-    testDir = env.testDir;
+    _testDir = env.testDir;
     configDir = env.configDir;
     projectDir = env.projectDir;
     cleanup = env.cleanup;
@@ -65,10 +72,10 @@ describe("Batch Command Handlers", function () {
         name: string,
         description: string,
         schema: object,
-        handler: any
+        handler: unknown
       ) => {
         if (name === "execute_batch_commands") {
-          executeBatchCommandsHandler = handler;
+          executeBatchCommandsHandler = handler as RequestHandler;
         }
       },
     } as unknown as McpServer;
@@ -115,13 +122,13 @@ describe("Batch Command Handlers", function () {
       });
 
       // Verify the response
-      expect(response.isError).to.be.undefined;
+      expect(response.isError).to.equal(undefined);
       expect(response.content[0].text).to.include("First command");
       expect(response.content[0].text).to.include("Second command");
 
       // Verify the file was created
       const outputPath = path.join(projectDir, "output.txt");
-      expect(fs.existsSync(outputPath)).to.be.true;
+      expect(fs.existsSync(outputPath)).to.equal(true);
       const content = fs.readFileSync(outputPath, "utf8");
       expect(content).to.include("First command");
       expect(content).to.include("Second command");
@@ -147,7 +154,7 @@ describe("Batch Command Handlers", function () {
 
       // Verify file contents
       const outputPath = path.join(projectDir, "output2.txt");
-      expect(fs.existsSync(outputPath)).to.be.true;
+      expect(fs.existsSync(outputPath)).to.equal(true);
       const content = fs.readFileSync(outputPath, "utf8");
       expect(content).to.include("First command");
       expect(content).not.to.include("Third command");
@@ -171,7 +178,7 @@ describe("Batch Command Handlers", function () {
 
       // Verify file contents - should include both first and third command
       const outputPath = path.join(projectDir, "output3.txt");
-      expect(fs.existsSync(outputPath)).to.be.true;
+      expect(fs.existsSync(outputPath)).to.equal(true);
       const content = fs.readFileSync(outputPath, "utf8");
       expect(content).to.include("First command");
       expect(content).to.include("Third command");
@@ -184,7 +191,7 @@ describe("Batch Command Handlers", function () {
       });
 
       // Verify the error response
-      expect(response.isError).to.be.true;
+      expect(response.isError).to.equal(true);
       expect(response.content[0].text).to.include(
         "Invalid or unregistered project"
       );

@@ -1,27 +1,25 @@
 // src/test/integration/docker/execution.test.ts
 import { expect } from "chai";
-import * as fs from "fs";
 import * as path from "path";
 import {
-  executeDockerCommand,
   checkContainerRunning,
   checkNetworkExists,
+  executeDockerCommand,
 } from "../../../docker/execution.js";
-import { setupTestEnvironment, createTestConfig } from "../setup.js";
+import { createTestConfig, setupTestEnvironment } from "../setup.js";
 import {
-  isDockerAvailable,
-  createTestContainer,
-  removeContainer,
   createNetwork,
+  createTestContainer,
+  createTestFile,
+  isDockerAvailable,
+  removeContainer,
   removeNetwork,
   uniqueName,
-  createTestFile,
 } from "../testUtils.js";
 
 describe("Docker Execution", function () {
   this.timeout(30000); // Docker operations can be slow
 
-  let testDir: string;
   let configDir: string;
   let projectDir: string;
   let cleanup: () => void;
@@ -48,7 +46,6 @@ describe("Docker Execution", function () {
 
     // Setup test environment
     const env = setupTestEnvironment();
-    testDir = env.testDir;
     configDir = env.configDir;
     projectDir = env.projectDir;
     cleanup = env.cleanup;
@@ -82,24 +79,24 @@ describe("Docker Execution", function () {
     it("should check if a container is running", async function () {
       // Initially the container should not be running
       const initialCheck = await checkContainerRunning(containerName);
-      expect(initialCheck).to.be.false;
+      expect(initialCheck).to.equal(false);
 
       // Start a container
       await createTestContainer(containerName, dockerImage, projectDir);
 
       // Now the container should be detected as running
       const runningCheck = await checkContainerRunning(containerName);
-      expect(runningCheck).to.be.true;
+      expect(runningCheck).to.equal(true);
     });
 
     it("should check if a network exists", async function () {
       // The network should exist (created in beforeEach)
       const networkExists = await checkNetworkExists(networkName);
-      expect(networkExists).to.be.true;
+      expect(networkExists).to.equal(true);
 
       // Non-existent network should return false
       const nonExistentCheck = await checkNetworkExists("non-existent-network");
-      expect(nonExistentCheck).to.be.false;
+      expect(nonExistentCheck).to.equal(false);
     });
   });
 
@@ -134,8 +131,10 @@ describe("Docker Execution", function () {
         await executeDockerCommand(projectName, "cat /nonexistent/file.txt");
         // Should not reach here
         expect.fail("Command should have thrown an error");
-      } catch (error: any) {
-        expect(error.message).to.include("No such file or directory");
+      } catch (error: unknown) {
+        expect((error as Error).message).to.include(
+          "No such file or directory"
+        );
       }
     });
   });
@@ -214,9 +213,11 @@ describe("Docker Execution", function () {
         expect(stdout).to.include("Testing network connection");
 
         // Success means the network parameter was included
-      } catch (error: any) {
+      } catch (error: unknown) {
         // If there's a network-related error, it will be caught here
-        expect.fail(`Network connection test failed: ${error.message}`);
+        expect.fail(
+          `Network connection test failed: ${(error as Error).message}`
+        );
       }
     });
   });

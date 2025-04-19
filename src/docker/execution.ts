@@ -77,7 +77,7 @@ export async function checkContainerRunning(
       `docker ps -q -f "name=^${containerName}$"`
     );
     return !!stdout.trim();
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -93,7 +93,7 @@ export async function checkNetworkExists(
       `docker network inspect ${networkName} --format "{{.Name}}"`
     );
     return !!stdout.trim();
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -104,7 +104,7 @@ export async function checkNetworkExists(
 async function executeInExistingContainer(
   containerName: string,
   command: string,
-  workdir: string = "/workspace"
+  workdir = "/workspace"
 ): Promise<ExecuteResult> {
   // Check if container is running
   if (!(await checkContainerRunning(containerName))) {
@@ -113,7 +113,7 @@ async function executeInExistingContainer(
 
   // Execute command in the running container with the user's UID/GID
   const dockerCommand = `docker exec -i --user=${uid}:${gid} --workdir="${workdir}" ${containerName} /bin/sh -c "${command}"`;
-  
+
   return await execAsync(dockerCommand, {
     maxBuffer: 10 * 1024 * 1024, // 10MB buffer
   });
@@ -126,11 +126,11 @@ async function executeWithDockerImage(
   image: string,
   hostPath: string,
   command: string,
-  containerPath: string = "/workspace",
+  containerPath = "/workspace",
   network?: string
 ): Promise<ExecuteResult> {
   // Add network parameter if specified
-  const networkParam = network ? `--network="${network}"` : '';
+  const networkParam = network ? `--network="${network}"` : "";
 
   const dockerCommand = `docker run -i --rm \
     ${networkParam} \

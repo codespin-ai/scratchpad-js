@@ -4,74 +4,86 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerProjectHandlers } from "../../../../mcp/handlers/projects.js";
 import { setupTestEnvironment, createTestConfig } from "../../setup.js";
 
-// Mock request handler type
-interface RequestHandler {
-  (args: Record<string, any>): Promise<any>;
+// Response type for MCP tools
+interface McpResponse {
+  isError?: boolean;
+  content: {
+    type: string;
+    text: string;
+  }[];
 }
 
-describe("Project Handlers", function() {
-  let testDir: string;
+// Mock request handler type
+type RequestHandler = (args: Record<string, unknown>) => Promise<McpResponse>;
+
+describe("Project Handlers", function () {
+  let _testDir: string;
   let configDir: string;
   let projectDir: string;
   let cleanup: () => void;
   let listProjectsHandler: RequestHandler;
 
-  beforeEach(function() {
+  beforeEach(function () {
     // Setup test environment
     const env = setupTestEnvironment();
-    testDir = env.testDir;
+    _testDir = env.testDir;
     configDir = env.configDir;
     projectDir = env.projectDir;
     cleanup = env.cleanup;
 
     // Create a simple server to register handlers
     const server = {
-      tool: (name: string, description: string, schema: object, handler: any) => {
+      tool: (
+        name: string,
+        description: string,
+        schema: object,
+        handler: unknown
+      ) => {
         if (name === "list_projects") {
-          listProjectsHandler = handler;
+          listProjectsHandler = handler as RequestHandler;
         }
-      }
+      },
     } as unknown as McpServer;
 
     // Register the handlers
     registerProjectHandlers(server);
   });
 
-  afterEach(function() {
+  afterEach(function () {
     // Clean up test environment
     cleanup();
   });
 
-  describe("list_projects", function() {
-    it("should return an empty list when no projects are registered", async function() {
+  describe("list_projects", function () {
+    it("should return an empty list when no projects are registered", async function () {
       const response = await listProjectsHandler({});
 
       // Verify the response
-      expect(response.isError).to.be.undefined;
+      expect(response.isError).to.equal(undefined);
       expect(response.content[0].text).to.include("No projects are registered");
     });
 
-    it("should list all registered projects", async function() {
+    it("should list all registered projects", async function () {
       // Register some projects in the config
       createTestConfig(configDir, {
         projects: [
           {
             name: "project1",
             hostPath: `${projectDir}/project1`,
-            dockerImage: "image1"
+            dockerImage: "image1",
           },
           {
             name: "project2",
             hostPath: `${projectDir}/project2`,
-            containerName: "container2"
-          }
-        ]
+            containerName: "container2",
+          },
+        ],
       });
 
       const response = await listProjectsHandler({});
 
       // Verify the response
-      expect(response.isError).to.be.undefined;
+      expect(response.isError).to.equal(undefined);
       expect(response.content[0].text).to.include("project1");
       expect(response.content[0].text).to.include("project2");
     });

@@ -1,6 +1,5 @@
 // src/mcp/handlers/projects.ts
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import * as zod from "zod";
 import { getProjects } from "../../config/projectConfig.js";
 
 /**

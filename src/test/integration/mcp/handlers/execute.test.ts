@@ -9,18 +9,25 @@ import {
   createTestFile,
   isDockerAvailable,
   removeContainer,
-  uniqueName
+  uniqueName,
 } from "../../testUtils.js";
 
-// Mock request handler type
-interface RequestHandler {
-  (args: Record<string, any>): Promise<any>;
+// Response type for MCP tools
+interface McpResponse {
+  isError?: boolean;
+  content: {
+    type: string;
+    text: string;
+  }[];
 }
 
-describe("Execute Handlers", function() {
+// Mock request handler type
+type RequestHandler = (args: Record<string, unknown>) => Promise<McpResponse>;
+
+describe("Execute Handlers", function () {
   this.timeout(30000); // Docker operations can be slow
-  
-  let testDir: string;
+
+  let _testDir: string;
   let configDir: string;
   let projectDir: string;
   let cleanup: () => void;
@@ -30,7 +37,7 @@ describe("Execute Handlers", function() {
   const projectName = "test-project";
   const dockerImage = "alpine:latest";
 
-  before(async function() {
+  before(async function () {
     // Check if Docker is available
     dockerAvailable = await isDockerAvailable();
     if (!dockerAvailable) {
@@ -38,7 +45,7 @@ describe("Execute Handlers", function() {
     }
   });
 
-  beforeEach(async function() {
+  beforeEach(async function () {
     // Skip tests if Docker is not available
     if (!dockerAvailable) {
       this.skip();
@@ -47,7 +54,7 @@ describe("Execute Handlers", function() {
 
     // Setup test environment
     const env = setupTestEnvironment();
-    testDir = env.testDir;
+    _testDir = env.testDir;
     configDir = env.configDir;
     projectDir = env.projectDir;
     cleanup = env.cleanup;
@@ -63,100 +70,107 @@ describe("Execute Handlers", function() {
 
     // Create a simple server to register handlers
     const server = {
-      tool: (name: string, description: string, schema: object, handler: any) => {
+      tool: (
+        name: string,
+        description: string,
+        schema: object,
+        handler: unknown
+      ) => {
         if (name === "execute_command") {
-          executeCommandHandler = handler;
+          executeCommandHandler = handler as RequestHandler;
         }
-      }
+      },
     } as unknown as McpServer;
 
     // Register the handlers
     registerExecuteHandlers(server);
   });
 
-  afterEach(async function() {
+  afterEach(async function () {
     if (dockerAvailable) {
       // Clean up Docker resources
       await removeContainer(containerName);
     }
-    
+
     // Clean up test environment
     cleanup();
   });
 
-  describe("execute_command (Container Mode)", function() {
-    beforeEach(async function() {
+  describe("execute_command (Container Mode)", function () {
+    beforeEach(async function () {
       // Create a test container
       await createTestContainer(containerName, dockerImage, projectDir);
-      
+
       // Register the container in the config
       createTestConfig(configDir, {
         projects: [
           {
             name: projectName,
             hostPath: projectDir,
-            containerName: containerName
-          }
-        ]
+            containerName: containerName,
+          },
+        ],
       });
     });
 
-    it("should execute a command in the container", async function() {
+    it("should execute a command in the container", async function () {
       const response = await executeCommandHandler({
         projectName,
-        command: "cat /workspace/test.txt"
+        command: "cat /workspace/test.txt",
       });
 
       // Verify the response
-      expect(response.isError).to.be.undefined;
+      expect(response.isError).to.equal(undefined);
       expect(response.content[0].text).to.include("Hello from execute test!");
     });
 
-    it("should handle command errors", async function() {
+    it("should handle command errors", async function () {
       const response = await executeCommandHandler({
         projectName,
-        command: "cat /nonexistent/file.txt"
+        command: "cat /nonexistent/file.txt",
       });
 
       // Verify the error response
-      expect(response.isError).to.be.true;
+      expect(response.isError).to.equal(true);
       expect(response.content[0].text).to.include("No such file");
     });
 
-    it("should return error for invalid project", async function() {
+    it("should return error for invalid project", async function () {
       const response = await executeCommandHandler({
         projectName: "non-existent-project",
-        command: "echo 'This should fail'"
+        command: "echo 'This should fail'",
       });
 
       // Verify the error response
-      expect(response.isError).to.be.true;
-      expect(response.content[0].text).to.include("Invalid or unregistered project");
+      expect(response.isError).to.equal(true);
+      expect(response.content[0].text).to.include(
+        "Invalid or unregistered project"
+      );
     });
   });
 
-  describe("execute_command (Image Mode)", function() {
-    beforeEach(function() {
+  describe("execute_command (Image Mode)", function () {
+    beforeEach(function () {
       // Register the image in the config
       createTestConfig(configDir, {
         projects: [
           {
             name: projectName,
             hostPath: projectDir,
-            dockerImage
-          }
-        ]
+            dockerImage,
+          },
+        ],
       });
     });
 
-    it("should execute a command with the image", async function() {
+    it("should execute a command with the image", async function () {
       const response = await executeCommandHandler({
         projectName,
-        command: "cat /workspace/test.txt"
+        command: "cat /workspace/test.txt",
       });
 
       // Verify the response
-      expect(response.isError).to.be.undefined;
+      expect(response.isError).to.equal(undefined);
       expect(response.content[0].text).to.include("Hello from execute test!");
     });
   });

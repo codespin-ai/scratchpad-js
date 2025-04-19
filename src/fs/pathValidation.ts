@@ -42,7 +42,7 @@ export function validateFilePath(
       fullPath === resolvedProjectDir ||
       fullPath.startsWith(resolvedProjectDir + path.sep)
     );
-  } catch (error) {
+  } catch {
     // Any path resolution errors are treated as security issues
     return false;
   }

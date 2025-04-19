@@ -58,22 +58,23 @@ describe("Path Validation", function () {
   describe("validateFilePath", function () {
     it("should return true for file paths within project directory", function () {
       // Simple file path
-      expect(validateFilePath(projectDir, "file.txt")).to.be.true;
+      expect(validateFilePath(projectDir, "file.txt")).to.equal(true);
 
       // Nested file path
-      expect(validateFilePath(projectDir, "nested/file.txt")).to.be.true;
+      expect(validateFilePath(projectDir, "nested/file.txt")).to.equal(true);
     });
 
     it("should return false for file paths outside project directory", function () {
       // Absolute path outside project
-      expect(validateFilePath(projectDir, "/etc/passwd")).to.be.false;
+      expect(validateFilePath(projectDir, "/etc/passwd")).to.equal(false);
 
       // Relative path outside project using parent directory traversal
-      expect(validateFilePath(projectDir, "../outside.txt")).to.be.false;
+      expect(validateFilePath(projectDir, "../outside.txt")).to.equal(false);
 
       // Path with directory traversal
-      expect(validateFilePath(projectDir, "nested/../../outside.txt")).to.be
-        .false;
+      expect(validateFilePath(projectDir, "nested/../../outside.txt")).to.equal(
+        false
+      );
     });
   });
 
@@ -85,8 +86,8 @@ describe("Path Validation", function () {
 
       // Check that all directories were created
       const dirPath = path.dirname(filePath);
-      expect(fs.existsSync(dirPath)).to.be.true;
-      expect(fs.statSync(dirPath).isDirectory()).to.be.true;
+      expect(fs.existsSync(dirPath)).to.equal(true);
+      expect(fs.statSync(dirPath).isDirectory()).to.equal(true);
     });
 
     it("should work with existing directories", function () {
