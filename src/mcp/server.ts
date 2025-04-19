@@ -1,17 +1,21 @@
 // src/mcp/server.ts
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { registerFileTools } from "./tools/files.js";
-import { registerProjectTools } from "./tools/projects.js";
-import { registerExecuteTools } from "./tools/execute.js";
-import { registerBatchTools } from "./tools/batch.js";
-import { registerBatchFileTools } from "./tools/batchFiles.js";
-import { addLoggingToServer } from "./loggingWrapper.js";
-import { isDebugEnabled } from "../utils/logger.js";
+import { createLoggingEnabledServer } from "./logging.js";
 
+// Import handlers
+import { registerFileHandlers } from "./handlers/files.js";
+import { registerProjectHandlers } from "./handlers/projects.js";
+import { registerExecuteHandlers } from "./handlers/execute.js";
+import { registerBatchHandlers } from "./handlers/batch.js";
+import { registerBatchFileHandlers } from "./handlers/batchFiles.js";
+
+/**
+ * Create the MCP server with all handlers registered
+ */
 export async function createServer(): Promise<McpServer> {
-  // Create either a regular or logging-enabled server based on the server type
-  const server = new McpServer(
+  // Create the base server
+  const baseServer = new McpServer(
     {
       name: "codebox",
       version: "1.0.0",
@@ -25,21 +29,22 @@ export async function createServer(): Promise<McpServer> {
     }
   );
 
-  // If debug mode is enabled, add logging
-  const serverWithLogging = isDebugEnabled()
-    ? addLoggingToServer(server)
-    : server;
+  // Add logging if enabled in configuration
+  const server = createLoggingEnabledServer(baseServer);
 
-  // Register all tools
-  registerFileTools(serverWithLogging);
-  registerProjectTools(serverWithLogging);
-  registerExecuteTools(serverWithLogging);
-  registerBatchTools(serverWithLogging);
-  registerBatchFileTools(serverWithLogging);
+  // Register all handlers
+  registerFileHandlers(server);
+  registerProjectHandlers(server);
+  registerExecuteHandlers(server);
+  registerBatchHandlers(server);
+  registerBatchFileHandlers(server);
 
-  return serverWithLogging;
+  return server;
 }
 
+/**
+ * Start the MCP server and connect it to stdio
+ */
 export async function startServer(): Promise<void> {
   const server = await createServer();
   const transport = new StdioServerTransport();
